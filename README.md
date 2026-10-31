@@ -1,4 +1,4 @@
-# BlueprintReview
+# <img src="app-icon.svg" alt="" width="40" height="40" align="top"> BlueprintReview
 
 The Blueprint viewer and diff for Unreal Engine, no editor needed.
 
