@@ -1,0 +1,32 @@
+name: Bug report
+description: Something doesn't open, looks wrong or crashes.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't attach assets you aren't allowed to share (your studio's, or from paid Marketplace/Fab content). A screenshot, or a small Blueprint made in a fresh project that shows the problem, is best.
+  - type: input
+    id: version
+    attributes:
+      label: BlueprintReview version
+      description: Shown in the title bar, or `blueprintreview --version`.
+    validations:
+      required: true
+  - type: input
+    id: saved-by
+    attributes:
+      label: Engine that saved the asset
+      description: The "saved by" line of `blueprintreview info <file>.uasset`, e.g. 5.4.4.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: The relevant part of %LOCALAPPDATA%\BlueprintReview\Logs\BlueprintReview.log, or the Output Log panel (Ctrl+`).
+      render: text
