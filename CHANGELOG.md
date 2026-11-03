@@ -4,6 +4,10 @@ What changed in each release of BlueprintReview (the app `blueprintreview-app` a
 
 ## [Unreleased]
 
+## [1.2.0-beta3] - 2026-11-03
+
+- The Microsoft Store package lists *BlueprintReview CLI* in the Start menu, as the Store requires. Started from there, it shows its help and waits for Enter; from a terminal it works as before.
+
 ## [1.2.0-beta2] - 2026-11-03
 
 - **A setup wizard for the installer:** the license agreement, then *Install* for you alone, or *Advanced* to install for every user, choose the folder and pick what to install: the app (with or without *Open with* for `.uasset` files) and the command-line tool (with or without adding it to `PATH`). The last page can start BlueprintReview.
