@@ -387,7 +387,12 @@ Prints the JSON Schema of the format `dump` writes and `check` reads. The repo k
 
 ---
 
-## `blueprintreview edit` — Blueprint edit plans
+## `blueprintreview edit` — Blueprint edit plans (experimental)
+
+> **Experimental:** Blueprint editing (the *Blueprint Edit Automation* plugin, edit plans and
+> `blueprintreview edit`) is experimental. The plan format and the ops may still change between releases, and
+> an edit can fail or need finishing by hand in the editor. Keep the project under source control and review
+> every change before you commit it.
 
 ```sh
 blueprintreview edit validate plan.json --project MyGame.uproject          # offline checks; exit 1 on errors
@@ -555,7 +560,7 @@ Graph controls:
 - **Revision labels:** the bottom-right corner of each side names the asset and the revision it comes from, as in the editor: `Revision 45dab25b - 19 Jun 2026, 12:33:25 pm` for a version from a git commit, `Local Revision` for the working copy or a file git doesn't know. git runs in the background, so the window opens straight away; until it answers, the labels say `Looking up revision…`.
 - **Swap** exchanges the old and new versions; **Exit diff** goes back to the normal view of the new version.
 - **Report** (in the toolbar) shows the diff as a report instead: every change as a list, in the same wording and colours as *Changes*, then each changed graph's old and new version side by side as one image (the drawing [`blueprintreview render --against`](#blueprintreview-render--graphs-as-svg-images) writes). **Fit width**, 50%, 100% and 200% size the images. **Save as HTML…** writes the report as one file with the images inline, which opens in any browser (on the web it downloads). **Interactive diff** goes back.
-- **Editions:** the free Lite shows every diff as its report; the interactive view, and the Time-lapse, are part of Pro (see `docs/RELEASE_PLAN.md`, "Pricing and tiers"). The window title and a toolbar badge (`LITE` or `PRO`) show which edition runs. The license decides which (see [GUIDE.md](GUIDE.md), "Editions, trial and license"). A license, the 14-day trial from the first launch, or the beta (which for now unlocks everything) runs as Pro. The toolbar's licence chip names the state (`PRO TRIAL · 12 DAYS`, `BETA`, `LITE`, `PRO`), and its **Activate…** (Lite: **Upgrade…**) button opens the *License* window, which activates a key or links to the pricing; the window title names the state too, and a dismissable bar reminds in the trial's last 3 days and once after. In Lite, *Interactive diff · PRO* and *History · PRO* open that window. `blueprintreview diff` and `render` check the same license. `BLUEPRINTREVIEW_EDITION=lite` or `pro` (on the web `?edition=lite`) overrides it, to try an edition.
+- **Editions:** the free Lite shows every diff as its report; the interactive view, and the Time-lapse, are part of Pro (see `docs/RELEASE_PLAN.md`, "Pricing and tiers"). The window title and a toolbar badge (`LITE` or `PRO`) show which edition runs. The license decides which (see [GUIDE.md](GUIDE.md), "Editions, trial and license"). A license, the 14-day trial from the first launch, or the beta (which unlocks everything until the end of 30 November 2026, `bp_license::BETA_UNTIL`; a first launch in the beta gets its trial after that date) runs as Pro. The toolbar's licence chip names the state (`PRO TRIAL · 12 DAYS`, `BETA`, `LITE`, `PRO`), and its **Activate…** (Lite: **Upgrade…**) button opens the *License* window, which activates a key or links to the pricing; the window title names the state too, and a dismissable bar reminds in the trial's last 3 days and once after. In Lite, *Interactive diff · PRO* and *History · PRO* open that window. `blueprintreview diff` and `render` check the same license. `BLUEPRINTREVIEW_EDITION=lite` or `pro` (on the web `?edition=lite`) overrides it, to try an edition.
 - **Updates:** once a day at start-up, a release build reads `https://blueprintreview.efenggamedev.com/latest.json` (written by the release workflow). When there's a newer release, *Version X available* appears next to the version label. The label's menu runs the check now, or turns it off (*Check for updates daily*, saved in `%LOCALAPPDATA%\BlueprintReview\Updates.json`). Debug builds don't check unless `BLUEPRINTREVIEW_UPDATE_URL` names a `latest.json`, and the Microsoft Store package never does (the Store updates it).
 
 #### As a git difftool
@@ -746,7 +751,7 @@ The web build (`cd crates/blueprintreview-app && trunk serve`) supports **Open�
 
 #### Web demo
 
-The [live demo](https://blueprintreview.efenggamedev.com/demo/) is the web build with `fixtures/` staged next to it. `.github/workflows/web-demo.yml` builds it on every push to `main` and deploys `blueprintreview.efenggamedev.com` to the Cloudflare Worker `ue-blueprint-viewer` (`site/wrangler.toml`, `wrangler deploy`): as static assets, the page in `site/public/` at `/`, the demo at `/demo/` and the [PR viewer](#pr-viewer-view) at `/view/`, plus the Worker script for the PR viewer's GitHub sign-in. The landing page (`/`, with `style.css`, `privacy.html`, `img/` and `legal/`, where the deploy copies `EULA.md` and `THIRD-PARTY-NOTICES.md` as `.txt`) is public. Everything else sits behind Cloudflare Access, because the demo ships internal fixtures (see `RELEASE_CHECKLIST.md`). After each deploy the workflow checks that `/demo/`, `/demo/fixtures/index.json`, `/view/`, `/auth/login` and `/api/blob` redirect to the Access login, and fails otherwise; it warns if `/`, `/style.css`, `/privacy.html` or `/legal/EULA.txt` don't answer 200.
+The [live demo](https://blueprintreview.efenggamedev.com/demo/) is the web build with `fixtures/` staged next to it. `.github/workflows/web-demo.yml` builds it on every push to `main` and deploys `blueprintreview.efenggamedev.com` to the Cloudflare Worker `ue-blueprint-viewer` (`site/wrangler.toml`, `wrangler deploy`): as static assets, the page in `site/public/` at `/`, the user guide at `/docs/` (`scripts/build_docs.py`, from `docs/guide/` and the reference pages), the release notes at `/changelog/`, the [public demo](#public-demo-try) at `/try/`, the demo at `/demo/` and the [PR viewer](#pr-viewer-view) at `/view/`, plus the Worker script for the PR viewer's GitHub sign-in. The landing page (`/`, with `style.css`, `privacy.html`, `img/` and `legal/`, where the deploy copies `EULA.md` and `THIRD-PARTY-NOTICES.md` as `.txt`), `/docs/`, `/changelog/` and `/try/` are public. Everything else sits behind Cloudflare Access, because the demo ships internal fixtures (see `RELEASE_CHECKLIST.md`). After each deploy the workflow checks that `/demo/`, `/demo/fixtures/index.json`, `/view/`, `/auth/login` and `/api/blob` redirect to the Access login, and fails otherwise, and fails unless `/try/` and `/try/fixtures/index.json` answer 200 with only the sample project's files in the manifest; it warns if `/`, `/style.css`, `/privacy.html`, `/changelog/`, `/docs/` or `/legal/EULA.txt` don't answer 200.
 - It opens `5.7/BP_Spawner.uasset` by default. `?file=<folder>/<file>` opens another fixture, e.g. `?file=5.3/BP_Door.uasset`. Adding `&old=<folder>/<file>` opens the diff view against another fixture, e.g. `?file=diff/BP_Cog/new.uasset&old=diff/BP_Cog/old.uasset`.
 - The toolbar's **Samples** menu lists every fixture by folder. Picking one opens it and updates the URL, so you can share the link.
 - **Samples → Diff samples** opens the edited pairs of `fixtures/diff/` in the diff view: two versions of one Blueprint, each saved by the editor.
@@ -754,6 +759,21 @@ The [live demo](https://blueprintreview.efenggamedev.com/demo/) is the web build
 - In the diff view, a sample's corner label shows its path in place of a git revision.
 - A sample's enum assets are loaded when they're staged next to it (`<Enum>.uasset` in the same folder). The manifest lists them under `enums`, so the *Samples* menu doesn't offer them. A sample's Blueprint parent is loaded the same way, when it's a sample in the same folder.
 - **Open…** and drag-and-drop work as in the plain web build.
+
+#### Public demo (`/try/`)
+
+`/try/` is the landing page's *Try it in your browser*: the same web build, with two public projects as its samples instead of `fixtures/` (Epic content, which may not be published): the [demo project](https://github.com/blueprintreview/demo-project), a player character whose history is ten larger changes, and the guide's [sample project](https://github.com/blueprintreview/sample-project). Both are made by `scripts/make_sample_project.py` from edit plans (`--set demo`: `site/demo-project/plans/` and `files/`; the guide's: `docs/guide/sample/`). The workflow clones them with their whole history and LFS objects, and `scripts/stage_sample.py` stages, per `--sample PATH=Folder`, the assets as they are now under `<Folder>/` (one folder, so enum assets are found next to the Blueprints), and a diff pair per asset each commit modified, `diff/<Folder>-<NN>-<Asset>/old.uasset` and `new.uasset` (at the commit's parent and at the commit, with the commit's enum assets beside them), named `<Asset>: <commit subject>` in **Samples → Diff samples**, the projects in the order given. The manifest's `default` is the pair the page opens without `?file=` (`--default`, a commit subject); `?file=` and `&old=` work as in the demo.
+
+```sh
+cd crates/blueprintreview-app && trunk build --release --public-url ./ && cd ../..
+cp -r crates/blueprintreview-app/dist E:/tmp/try && rm -rf E:/tmp/try/fixtures
+python scripts/stage_sample.py --sample E:/dev/projects/BlueprintReviewDemo=Demo --sample E:/dev/projects/BlueprintReviewSample=Sample --default "Player: stamina for sprinting, drained on Tick" E:/tmp/try
+python -m http.server -d E:/tmp/try 8080                    # then open http://localhost:8080/
+```
+
+`stage_sample.py` reads each revision with `git cat-file` and `git lfs smudge`, so a clone needs every revision's LFS objects (`git lfs fetch --all`); it fails on a blob that isn't a package.
+
+To change the demo project, edit or add a plan in `site/demo-project/plans/` (one commit per plan, its `meta.commit`), rebuild it with `python scripts/make_sample_project.py --set demo --out E:/dev/projects/BlueprintReviewDemo --engine "C:/Program Files/Epic Games/UE_5.8" --work E:/tmp/bpedit/host58 --force` (or `--from N`), and force-push it to `blueprintreview/demo-project`. Its plans name the nodes earlier plans made by object name (`{"name": "K2Node_VariableSet_3", "graph": "EventGraph"}`), which every build gives the same, so a plan changed in the middle means checking the ones after it.
 
 #### PR viewer (`/view/`)
 
@@ -768,6 +788,7 @@ cd crates/blueprintreview-app && trunk build --release --public-url ./ && cd ../
 python scripts/stage_fixtures.py crates/blueprintreview-app/dist   # copies fixtures/ and writes fixtures/index.json (files, diff pairs, enum assets)
 rm -rf site/dist && cp -r site/public site/dist && cp -r crates/blueprintreview-app/dist site/dist/demo
 mkdir -p site/dist/legal && cp EULA.md site/dist/legal/EULA.txt && cp THIRD-PARTY-NOTICES.md site/dist/legal/THIRD-PARTY-NOTICES.txt
+pip install -r scripts/requirements-docs.txt && python scripts/build_docs.py site/dist   # /docs/
 python -m http.server -d site/dist 8080                      # then open http://localhost:8080/demo/
 ```
 

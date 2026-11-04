@@ -1,5 +1,10 @@
 # Editing Blueprints with edit plans
 
+> **Experimental:** Blueprint editing (the *Blueprint Edit Automation* plugin, edit plans and
+> `blueprintreview edit`) is experimental. The plan format and the ops may still change between releases, and
+> an edit can fail or need finishing by hand in the editor. Keep the project under source control and review
+> every change before you commit it.
+
 The **BlueprintEditAutomation** plugin applies *edit plans* to Blueprints, user enums, user structs and data
 tables: JSON files that say what to change, op by op. A person, a script or an AI agent writes the plan, and the
 plugin makes the edits through the same engine calls the Blueprint editor uses.
@@ -20,7 +25,7 @@ their `NodeGuid`s and pins `nodeGuid:pinId`. So the loop is:
 4. **apply** it with `blueprintreview edit apply`;
 5. **review** the change with `blueprintreview diff` on the before and after JSON.
 
-- Install: [PLUGIN.md](PLUGIN.md). This plugin needs BlueprintExporter enabled too.
+- Install: [PLUGIN.md](PLUGIN.md). This plugin needs BlueprintExporter enabled too. Neither is in the beta's downloads yet; write to [support@efenggamedev.com](mailto:support@efenggamedev.com) to try them.
 - Engines: UE 5.7 and 5.8.
 - Supported assets: uncooked editor assets.
 

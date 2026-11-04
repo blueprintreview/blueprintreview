@@ -33,7 +33,7 @@ jobs:
 
 For the links, the viewer must be [hosted](#hosting-the-viewer) and its GitHub App installed on the project repository. Without `viewer-url`, everything else works the same.
 
-`@v1` exists once the first `v1.x.y` release is public (see [Releases](#releases)). The action is in [blueprintreview/action](https://github.com/blueprintreview/action) (MIT), and the binaries it downloads in the releases of [blueprintreview/blueprintreview](https://github.com/blueprintreview/blueprintreview/releases).
+`@v1` exists once the first `v1.x.y` release is public (see [Releases](#releases)). During the beta there is none yet: use a pre-release's tag, `blueprintreview/action@v1.2.0-beta4`. The action is in [blueprintreview/action](https://github.com/blueprintreview/action) (MIT), and the binaries it downloads in the releases of [blueprintreview/blueprintreview](https://github.com/blueprintreview/blueprintreview/releases).
 
 ### Inputs
 
@@ -53,7 +53,7 @@ Outputs: `blueprints` (how many Blueprints changed) and `report` (the full repor
 
 ### What it does
 
-1. Gets the `blueprintreview` binary: the release asset for the runner (Linux x64/arm64, Windows x64, macOS arm64) matching the action's tag, checked against the release's `SHA256SUMS`. With no matching release it fails, except in the source repository, where `uses: ./` builds it from source (a few minutes the first time).
+1. Gets the `blueprintreview` binary: the release asset for the runner (Linux x64/arm64, Windows x64) matching the action's tag, checked against the release's `SHA256SUMS`. With no matching release it fails, except in the source repository, where `uses: ./` builds it from source (a few minutes the first time).
 2. Runs `pr-report` on the PR's base and head commits. Git LFS objects of the base version are downloaded as needed.
 3. Writes the full report to the job summary.
 4. Finds its earlier comment by the report's first line and updates it, or posts a new one. It posts nothing when a PR has no Blueprint changes and there's no earlier comment; an earlier comment changes to "No Blueprint changes".
@@ -75,6 +75,8 @@ The action and its releases are public, so private repositories use it like publ
 See `RELEASE_CHECKLIST.md` before setting `PUBLIC_RELEASES` (`gh variable set PUBLIC_RELEASES --body true -R blueprintreview/blueprintreview-dev`).
 
 ## Hosting the viewer
+
+During the beta, the site's own viewer (`blueprintreview.efenggamedev.com/view/`) isn't open to other repositories: host your own as below, or leave `viewer-url` empty.
 
 The links point at the web viewer's `/view/` page, which needs the site's Worker (`site/worker/index.js`) to read files from GitHub as the signed-in user. Without a viewer, leave `viewer-url` empty: the comment then has the change lists and no links.
 

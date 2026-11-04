@@ -1,0 +1,167 @@
+{
+  "frames": false,
+  "fps": 30,
+  "size": [1280, 800],
+  "pixels_per_point": 1.5,
+  "thumbnail_at": 0,
+  "shots": [
+    {
+      "name": "viewer",
+      "setup": { "open": { "file": "sample:main|Content/Sample/BP_CoinSpawner.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": "SpawnCoin", "secs": 0 } }, "double_click", { "wait": 0.3 },
+        { "move_to": { "to": [900, 420], "secs": 0 } }, { "key": "F" }, { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "viewer" }
+      ]
+    },
+    {
+      "name": "folder",
+      "setup": { "folder": { "from": "sample:work|Content", "root": "BlueprintReviewSample/Content", "open": ["BP_Coin", "BP_ScoreGameMode"] } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": [900, 420], "secs": 0 } }, { "key": "F" }, { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "folder" }
+      ]
+    },
+    {
+      "name": "variable-details",
+      "setup": { "open": { "file": "sample:main|Content/Sample/BP_CoinSpawner.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": "SpawnRadius", "secs": 0 } }, "click", { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "variable-details" }
+      ]
+    },
+    {
+      "name": "data-table",
+      "setup": { "open": { "file": "sample:main|Content/Sample/Data/DT_CoinRewards.uasset" } },
+      "fade_in": 0,
+      "actions": ["settle", { "wait": 0.2 }, { "snap": "data-table" }]
+    },
+    {
+      "name": "find",
+      "setup": { "open": { "file": "sample:main|Content/Sample/BP_ScoreGameMode.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "key": "Ctrl+F" }, { "wait": 0.2 }, { "type": "TotalScore" }, { "key": "Enter" }, "settle", { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "find" }
+      ]
+    },
+    {
+      "name": "find-all",
+      "setup": { "folder": { "from": "sample:work|Content", "root": "BlueprintReviewSample/Content", "open": ["BP_Coin"] } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "key": "Ctrl+Shift+F" }, { "wait": 0.2 }, { "type": "Score" }, { "key": "Enter" }, "settle", { "wait": 0.5 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "find-all" }
+      ]
+    },
+    {
+      "name": "compare",
+      "setup": { "diff": { "old": "sample:@Spawner: SpawnRadius|Content/Sample/BP_Coin.uasset", "new": "sample:@Coin: Silver coins|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": "Added Node 'Select'", "secs": 0 } }, "click", { "wait": 0.5 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "compare" }
+      ]
+    },
+    {
+      "name": "compare-report",
+      "setup": { "diff": { "old": "sample:@Spawner: SpawnRadius|Content/Sample/BP_Coin.uasset", "new": "sample:@Coin: Silver coins|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": "Report", "secs": 0 } }, "click", "settle", { "wait": 0.5 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "compare-report" }
+      ]
+    },
+    {
+      "name": "compare-moved",
+      "setup": { "diff": { "old": "sample:@Coin: spin|Content/Sample/BP_Coin.uasset", "new": "sample:@Coin: tidy|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": ["settle", { "wait": 0.3 }, { "snap": "compare-moved" }]
+    },
+    {
+      "name": "compare-rename",
+      "setup": { "diff": { "old": "sample:@Spawner: route|Content/Sample/BP_ScoreGameMode.uasset", "new": "sample:@Game mode: rename|Content/Sample/BP_ScoreGameMode.uasset" } },
+      "fade_in": 0,
+      "actions": ["settle", { "wait": 0.3 }, { "snap": "compare-rename" }]
+    },
+    {
+      "name": "compare-data-table",
+      "setup": { "diff": { "old": "sample:@Game mode: rename|Content/Sample/Data/DT_CoinRewards.uasset", "new": "sample:@Rewards: rebalance|Content/Sample/Data/DT_CoinRewards.uasset" } },
+      "fade_in": 0,
+      "actions": ["settle", { "wait": 0.3 }, { "snap": "compare-data-table" }]
+    },
+    {
+      "name": "compare-branch",
+      "setup": { "diff": { "old": "sample:main|Content/Sample/BP_ScoreGameMode.uasset", "new": "sample:feature/double-points|Content/Sample/BP_ScoreGameMode.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": [900, 420], "secs": 0 } }, { "key": "F" }, { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "compare-branch" }
+      ]
+    },
+    {
+      "name": "copy-nodes",
+      "setup": { "open": { "file": "sample:@Coin: tidy|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": [900, 700], "secs": 0 } }, "click", { "key": "Ctrl+A" }, { "wait": 0.2 },
+        { "drag": { "by": [0, 0], "secs": 0.1, "button": "secondary" } }, { "wait": 0.3 },
+        { "snap": "copy-nodes" }
+      ]
+    },
+    {
+      "name": "help-menu",
+      "setup": { "open": { "file": "sample:main|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": "Help", "secs": 0 } }, "click", { "wait": 0.3 },
+        { "move_to": { "to": "User guide", "secs": 0 } }, { "wait": 0.2 },
+        { "snap": "help-menu" }
+      ]
+    },
+    {
+      "name": "output-log",
+      "setup": { "open": { "file": "sample:main|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "key": "Ctrl+`" }, { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "output-log" }
+      ]
+    },
+    {
+      "name": "license",
+      "setup": { "open": { "file": "sample:main|Content/Sample/BP_Coin.uasset" } },
+      "fade_in": 0,
+      "actions": [
+        "settle",
+        { "move_to": { "to": "v1.0.0", "secs": 0 } }, "click", { "wait": 0.3 },
+        { "move_to": { "to": "License…", "secs": 0 } }, "click", { "wait": 0.3 },
+        { "move_to": { "to": [1279, 799], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "license" }
+      ]
+    }
+  ]
+}

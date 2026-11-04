@@ -1,8 +1,8 @@
 # BlueprintReview user guide
 
-BlueprintReview opens Unreal Engine Blueprint assets (`.uasset`) without the editor. You can read the graphs, search them, copy nodes, and compare two versions side by side. This guide covers Windows. For every command and option, see the [command-line reference](https://github.com/blueprintreview/blueprintreview/blob/main/docs/CLI.md).
+BlueprintReview opens Unreal Engine Blueprint assets (`.uasset`) without the editor. You can read the graphs, search them, copy nodes, and compare two versions side by side. This short guide covers Windows. The full [user guide](https://blueprintreview.efenggamedev.com/docs/) has a step-by-step page for every task, and the [command-line reference](https://blueprintreview.efenggamedev.com/docs/cli/) every command and option.
 
-It reads uncooked editor assets saved by UE 4.26/4.27 and 5.0 to 5.8. Cooked assets from a packaged game have no graphs left in them, so they don't open.
+It reads uncooked editor assets saved by UE 4.25 to 4.27 and 5.0 to 5.8. Cooked assets from a packaged game have no graphs left in them, so they don't open.
 
 ## 1. Install
 
@@ -72,7 +72,7 @@ Run `blueprintreview p4-setup`; it prints these steps with your install path fil
 | Field | Value |
 |---|---|
 | Extension | `.uasset` |
-| Application | `C:\Program Files\BlueprintReview\blueprintreview-app.exe` |
+| Application | `%LOCALAPPDATA%\Programs\BlueprintReview\blueprintreview-app.exe` (`C:\Program Files\BlueprintReview\blueprintreview-app.exe` when installed for every user) |
 | Arguments | `--diff %1 %2` |
 
 *Diff Against Have Revision*, *Diff Against Previous* and the diffs in the *History* tab then open in BlueprintReview.

@@ -1,6 +1,6 @@
 # BlueprintReview End User License Agreement
 
-Version 1.0, effective 1 November 2026.
+Version 1.1, effective 4 November 2026.
 
 This agreement is between Jiaming Feng, trading as Eric Feng/DACE Productions, New Zealand ("we", "us") and the person or
 organisation that buys or uses BlueprintReview ("you"). By installing or using BlueprintReview you
@@ -27,6 +27,11 @@ to these terms.
   by removing the license from the old one.
 - **Free features:** features we mark as free may be used by anyone, at no charge, under the same
   terms except section 2's seat limits and the update period.
+- **Trial and pre-releases:** without a license, the Software runs with every feature for a trial
+  of 14 days from its first use, then with its free features only. Pre-release versions (such as
+  a beta) run with every feature, without a license, until the date set in them, after which the
+  trial applies. Pre-release versions are provided as they are (section 9) and may change, or stop
+  being offered, at any time.
 - **Automation:** running the command-line tool in your own continuous-integration or code-review
   systems is allowed. Each machine that runs licensed features uses one of the license's
   activations; people who only read its output don't need one.

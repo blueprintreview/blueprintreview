@@ -4,6 +4,29 @@ What changed in each release of BlueprintReview (the app `blueprintreview-app` a
 
 ## [Unreleased]
 
+## [1.2.0-beta4] - 2026-11-04
+
+- **A user guide** at [blueprintreview.efenggamedev.com/docs/](https://blueprintreview.efenggamedev.com/docs/): a step-by-step page for every task (opening and searching Blueprints, comparing, reviewing in git and Perforce, Time-lapse, pull requests, edit plans), with a sample project to follow along.
+- **Try it in your browser:** the landing page's button opens the viewer at [blueprintreview.efenggamedev.com/try/](https://blueprintreview.efenggamedev.com/try/), with no sign-in. It opens a diff from the history of a demo project, a player character, and **Samples** lists its Blueprints and the guide's sample project's, with a diff for every change in their history.
+- **Help** at the top right opens the guide, the shortcuts and the release notes, or starts an email to support; F1 opens the guide.
+- **Advanced pins:** the arrow at the bottom of a node shows or hides its advanced pins, on both sides of a diff, and nodes saved with their advanced pins shown open that way.
+- Variables, defaults and properties of a user-defined struct type show every field (with the field names the editor uses, and *N members* on array elements), instead of `()` when the fields were at their defaults.
+- An enum asset lists its entries by name (*Walk*, *Run*), not as `NewEnumerator0`, `NewEnumerator1`; the internal name is in the tooltip.
+- The diff view outlines changed nodes with a thin, even line that follows the node's shape at every zoom (in reports too), a comment's title bar sits inside its outline as in the editor, and unchanged graphs in *Changes* are dimmed.
+- Node icons are solid: the event diamond, the interface-message envelope and the server-only and client-only corner icons.
+- Data table diffs show a value the old row left at the struct's default as that default, not as added, and field names without their internal suffix when the row struct isn't found.
+- Blueprint Edit Automation: spawning nodes such as *Spawn Actor from Class* no longer crashes, a second *Return Node* gets one set of pins, an override event replaces the disabled ghost a new Blueprint has, and *set_root_component* replaces the default scene root instead of listing the new root twice. `blueprintreview edit apply` says where the editor stopped when it crashes.
+- **The beta has an end date:** everything stays unlocked until the end of 30 November 2026. After that, BlueprintReview without a license runs the 14-day Pro trial (counted from that date if you first started it during the beta), then Lite. Beta testers' keys keep Pro for every 1.x version.
+- A file that trips over a bug in the reader shows *ran into an internal error* instead of opening, and the app goes on: no crash dialog, no folder index stuck short of the end, no *Opening…* that never finishes. `blueprintreview textconv` prints a line about it instead of failing `git diff`.
+- **Report a problem…** fills in the version, the system and the log folder; *Help* also copies the support address (for webmail) and opens the log folder. After a crash, the dialog says which backup log to send.
+- The empty window has **Open…**, **Open Folder…** and **User guide** buttons, and a folder dropped on the window opens like *Open Folder…*. A file that won't open links to *Troubleshooting*.
+- **Find References** in *My Blueprint*'s right-click menu searches for a variable, function, event or component, as in the editor.
+- *Remove license* asks first, and forgets the license only once its place is free on the server (offline, it says so and offers *Forget it here anyway*). A license saved for another installation (after reinstalling Windows) says so, with *Free its place*. An activation still finishes if the window is closed meanwhile, connection errors read plainly, and a license that can't be saved says so.
+- The license file is written safely: a crash while saving can't lose it, and a damaged one is kept as `License.json.bad` instead of being replaced.
+- Source control: a git or Perforce command that hangs (an unreachable server) stops after a minute, and git's own errors, such as *detected dubious ownership*, are shown instead of *Not in source control*.
+- The update check offers pre-releases only to pre-release builds.
+- Blueprint editing (the *Blueprint Edit Automation* plugin, edit plans and `blueprintreview edit`) is marked experimental: the plugin shows as *Experimental* in the editor's Plugins window, and the docs say so. The plan format and the ops may still change.
+
 ## [1.2.0-beta3] - 2026-11-03
 
 - The Microsoft Store package lists *BlueprintReview CLI* in the Start menu, as the Store requires. Started from there, it shows its help and waits for Enter; from a terminal it works as before.
