@@ -23,8 +23,8 @@ run as an artifact (`blueprintreview-svgs`).
 
 ## Open the side-by-side diff
 
-During the beta, these links need a viewer your team hosts ([GitHub Action](../ACTION.md#hosting-the-viewer)); without
-one, the comment has the change lists only. When the repository has a viewer set up, each row ends with an **Open diff** link (**Open** for an added or deleted Blueprint):
+During the beta, the PR viewer isn't open to other repositories yet, so the comment has the change lists only; to try
+the viewer on your repository, write to support@efenggamedev.com. When the repository has a viewer set up, each row ends with an **Open diff** link (**Open** for an added or deleted Blueprint):
 
 1. Click it. The diff opens in your browser, in the same diff view as the desktop app
    ([Compare two versions](compare.md)): the base version on the left, the pull request's on the right, each side

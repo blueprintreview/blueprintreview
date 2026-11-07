@@ -24,6 +24,7 @@ The window is laid out like the Blueprint editor: *Components* and *My Blueprint
 - **Copy nodes:** select them and press **Ctrl+C**, then paste into the Blueprint editor or into blueprintue.com.
 - **Search:** **Ctrl+F** searches the open Blueprint; **Ctrl+Shift+F** searches every Blueprint in the folder.
 - **Display scale:** **Ctrl+scroll** over the panels, **Ctrl+=** and **Ctrl+-** make everything larger or smaller, **Ctrl+0** resets it. The version label's menu at the top right has the same buttons. The scale is kept for the next start.
+- **Developer Settings** in the same menu: *Show node internals in Details* adds what the editor's *Details* doesn't show (a node's class, GUID, every pin and saved property, and the *Info* categories). It is off by default, so a node like *Print String* shows an empty *Details*, as in the editor.
 
 ![Find in Blueprints](https://blueprintreview.efenggamedev.com/img/find.jpg)
 
@@ -40,6 +41,8 @@ With an asset open, click **Diff against…** and pick the older version. The ol
 **History** (the clock button) shows the asset's revisions from git or Perforce on a bar, and you can step through what each one changed.
 
 ![Time-lapse](https://blueprintreview.efenggamedev.com/img/timelapse.gif)
+
+**Sync** (desktop app, Pro) ties the diff's new side to the Unreal editor: panning, zooming, selecting nodes or switching graph here does the same in the editor's open Blueprint, and the other way round. The button appears when the new version is a file in a project whose editor has the Blueprint Review plugin running (the plugin writes `Saved/BlueprintReview/link.json` in the project folder, found from the file upwards to the folder with the `.uproject`). Next to the button it says *Connected to UE 5.7*, *Editor not found* (the editor isn't running) or *Connection lost*. Turning Sync on sends the diff's view to the editor first (graph, position, zoom, selection), opening the Blueprint there if it isn't open. How often the app asks the editor for its view and sends its own is set in the editor: *Editor Preferences > Plugins > Blueprint Review Link*, *Poll Interval Ms* and *Send Interval Ms* (read when Sync is switched on). While the app syncs, the plugin keeps the editor at full speed even with the app in front (*Keep Editor Awake*); without it, an editor in the background answers three times a second. The editor is only reached on `127.0.0.1`, with the token in `link.json`, and the new side's graph must be a top-level graph (nested graphs in the editor are left alone). For `git difftool`, the new side may be a temporary copy; the app then uses the repository path git passes (`--path`). The plugin isn't in the beta's downloads yet; write to support@efenggamedev.com to try it.
 
 ## 4. Set up git
 
@@ -111,4 +114,7 @@ Apart from this check and license activation, BlueprintReview makes no network c
 
 - **"a cooked asset":** the file comes from a packaged build, and cooking strips the graphs. Open the asset from the project's `Content` folder instead.
 - **"a Git LFS pointer, not the asset":** the real file hasn't been downloaded yet. Run `git lfs pull`.
+- **Components missing from *Components*:** the components a C++ parent class adds are known only for the stock
+  engine's classes (from UE 5.8). A Blueprint based on your project's own C++ class doesn't list that class's
+  components, and on a modified engine the components and inherited defaults shown are the stock engine's.
 - **Something looks wrong or the app crashes:** click **Output Log** at the top right, or press ``Ctrl+` ``. The log file is in `%LOCALAPPDATA%\BlueprintReview\Logs`. Please attach `BlueprintReview.log` when you write to support@efenggamedev.com.

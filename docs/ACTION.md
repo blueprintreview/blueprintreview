@@ -31,7 +31,7 @@ jobs:
           viewer-url: https://blueprintreview.example.com/view/   # optional: links to the interactive diff
 ```
 
-For the links, the viewer must be [hosted](#hosting-the-viewer) and its GitHub App installed on the project repository. Without `viewer-url`, everything else works the same.
+During the beta the PR viewer isn't open to other repositories, so leave `viewer-url` out: the comment then has the change lists and no links, and everything else works the same. To try the viewer on your repository, write to support@efenggamedev.com.
 
 `@v1` exists once the first `v1.x.y` release is public (see [Releases](#releases)). During the beta there is none yet: use a pre-release's tag, `blueprintreview/action@v1.2.0-beta4`. The action is in [blueprintreview/action](https://github.com/blueprintreview/action) (MIT), and the binaries it downloads in the releases of [blueprintreview/blueprintreview](https://github.com/blueprintreview/blueprintreview/releases).
 
@@ -69,22 +69,22 @@ The action and its releases are public, so private repositories use it like publ
 
 `.github/workflows/release.yml` runs on a `vX.Y.Z` tag in the private source repository (`blueprintreview/blueprintreview-dev`). It builds the binaries and `SHA256SUMS` (`blueprintreview-<target>.tar.gz`, the CLI the action downloads, and `blueprintreview-app-<target>`, the viewer app with the CLI). Where they go depends on the repository variable `PUBLIC_RELEASES`:
 
-- unset (now): a release of the private repository, and its major tag (`v1`) moved;
-- `true`: a release of the public `blueprintreview/blueprintreview` (a pre-release for tags like `v1.2.0-rc1`), and `action.yml` copied to `blueprintreview/action`, tagged there with the same tag and the major tag, so `@v1` picks up the release. Both use the `PUBLIC_REPO_TOKEN` secret, a fine-grained token with *Contents: read and write* on those two repositories (at most 366 days, which the org requires).
+- unset: a release of the private repository, and its major tag (`v1`) moved;
+- `true` (on since 1.2.0-beta2): a release of the public `blueprintreview/blueprintreview` (a pre-release for tags like `v1.2.0-rc1`), and `action.yml` copied to `blueprintreview/action`, tagged there with the same tag and the major tag, so `@v1` picks up the release. Both use the `PUBLIC_REPO_TOKEN` secret, a fine-grained token with *Contents: read and write* on those two repositories (at most 366 days, which the org requires).
 
-See `RELEASE_CHECKLIST.md` before setting `PUBLIC_RELEASES` (`gh variable set PUBLIC_RELEASES --body true -R blueprintreview/blueprintreview-dev`).
+`RELEASE_CHECKLIST.md` lists what to check before turning `PUBLIC_RELEASES` on (`gh variable set PUBLIC_RELEASES --body true -R blueprintreview/blueprintreview-dev`).
 
 ## Hosting the viewer
 
-During the beta, the site's own viewer (`blueprintreview.efenggamedev.com/view/`) isn't open to other repositories: host your own as below, or leave `viewer-url` empty.
+During the beta, the PR viewer (`blueprintreview.efenggamedev.com/view/`) isn't open to other repositories, and hosting one needs files that aren't public yet. Leave `viewer-url` empty, or write to support@efenggamedev.com to try it. The rest of this section is how the maintainers host it.
 
 The links point at the web viewer's `/view/` page, which needs the site's Worker (`site/worker/index.js`) to read files from GitHub as the signed-in user. Without a viewer, leave `viewer-url` empty: the comment then has the change lists and no links.
 
-The site is a Cloudflare Worker (`site/wrangler.toml`): the trunk web build as static assets (`/view/`, plus the landing page and the demo), and a small script (`site/worker/index.js`) that runs only for `/auth/*` (GitHub sign-in) and `/api/*` (the blob proxy). `.github/workflows/web-demo.yml` builds and deploys it. The setup below is a one-time job, in this order. Steps 1–3 are the site itself, also described in [CLI.md](CLI.md#web-demo); steps 4–6 add the sign-in.
+The site is a Cloudflare Worker (`site/wrangler.toml`): the trunk web build as static assets (`/view/`, plus the landing page and the demo), and a small script (`site/worker/index.js`) that runs only for `/auth/*` (GitHub sign-in) and `/api/*` (the blob proxy). `.github/workflows/web-demo.yml` builds and deploys it. The setup below is a one-time job, in this order. Steps 1–3 are the site itself, also described in the maintainers' notes (`docs/internals/hosting.md`); steps 4–6 add the sign-in.
 
-### 1. Put the hostname behind an access gate (before the first deploy)
+### 1. Put the private paths behind an access gate (before the first deploy)
 
-The demo ships internal fixtures, so the whole hostname must stay private (`RELEASE_CHECKLIST.md`). In Cloudflare Zero Trust, go to *Access → Applications → Add an application → Self-hosted*. Use the domain (`blueprintreview.efenggamedev.com`) with **no path**, so every path including `/view/`, `/auth/` and `/api/` is covered, and add an Allow policy for your team's email addresses. The first deploy makes the custom domain live, so this must exist first.
+The internal demo (`/demo/`) ships internal fixtures, and the viewer and its sign-in read private repositories, so they must stay private (`RELEASE_CHECKLIST.md`); the landing page, `/docs/`, `/changelog/` and the public demo `/try/` are public. In Cloudflare Zero Trust, go to *Access → Applications → Add an application → Self-hosted*. Use the domain (`blueprintreview.efenggamedev.com`) with the paths `demo`, `view`, `auth` and `api` (one destination each; every path under them is covered), and add an Allow policy for your team's email addresses. The first deploy makes the custom domain live, so this must exist first.
 
 ### 2. Let GitHub Actions deploy
 
@@ -92,7 +92,7 @@ Create a Cloudflare API token from the *Edit Cloudflare Workers* template, cover
 
 ### 3. Deploy
 
-Push to `main`, or run *Actions → Web demo → Run workflow* on a branch. After deploying, the workflow checks that `/`, `/demo/`, `/view/`, `/auth/login` and `/api/blob` all redirect to the Access login, and fails if one doesn't.
+Push to `main`, or run *Actions → Web demo → Run workflow* on a branch. After deploying, the workflow checks that `/demo/`, `/view/`, `/auth/login` and `/api/blob` redirect to the Access login and that `/try/` answers 200, and fails if one doesn't; it warns if `/`, `/docs/` or `/changelog/` don't answer 200.
 
 ### 4. Create the GitHub App
 

@@ -12,18 +12,20 @@
 | [`blueprintreview check`](#blueprintreview-check--compare-with-a-json-export) | Compares `blueprintreview`'s reading of an asset with a JSON export of it, e.g. from the UE plugin |
 | [`blueprintreview copy`](#blueprintreview-copy--nodes-as-copy-text) | Prints graph nodes as the editor's copy text, to paste into the UE Blueprint editor or blueprintue.com |
 | [`blueprintreview schema`](#blueprintreview-schema--json-schema) | Prints the JSON Schema of the `dump` format |
+| [`blueprintreview edit`](#blueprintreview-edit--blueprint-edit-plans-experimental) | Validates edit plans and applies them through the Unreal plugin (experimental) |
 | [`blueprintreview git-setup`](#blueprintreview-git-setup--set-git-up-for-blueprints) | Sets git up for Blueprints: `git diff` shows them as text, `git difftool` opens the viewer's diff |
 | [`blueprintreview p4-setup`](#with-perforce-p4v) | Prints how to make P4V open `.uasset` diffs in the viewer |
 | [`blueprintreview textconv`](#blueprintreview-textconv--blueprints-in-git-diff) | Prints a Blueprint as plain text, so `git diff` shows what changed in a `.uasset` |
 | [`blueprintreview pr-report`](#blueprintreview-pr-report--a-pull-requests-blueprint-changes) | Reports the Blueprints a branch changes as one Markdown PR comment, with links to the web viewer's diff (the [GitHub Action](ACTION.md) runs it) |
+| [`blueprintreview cpp`](#blueprintreview-cpp--blueprints-to-c) | Reports which Blueprints can be converted to C++, and generates the C++ |
 
-Every command takes a path to one `.uasset` file (`copy` also takes a JSON export), except `diff`, which takes two `.uasset` or JSON files (`render --against` too), `pr-report`, which reads both versions from git, and `git-setup`, which takes none. Use `blueprintreview <command> --help` for the options.
+Every command takes a path to one `.uasset` file (`copy` also takes a JSON export), except `diff`, which takes two `.uasset` or JSON files (`render --against` too), `pr-report`, which reads both versions from git, and `git-setup`, `p4-setup` and `schema`, which take none; `cpp` takes files or folders. Use `blueprintreview <command> --help` for the options.
 
 ## Getting `blueprintreview`
 
-Each [release](https://github.com/blueprintreview/blueprintreview/releases) has prebuilt binaries for Linux (x64, arm64), Windows (x64) and macOS (arm64): `blueprintreview-<target>.tar.gz` holds the CLI alone, and `blueprintreview-app-<target>` (`.zip` on Windows, `.tar.gz` elsewhere) holds the [viewer app](#the-viewer-app-blueprintreview-app) and the CLI together. Unpack it into a folder of its own; `SHA256SUMS` has the checksums.
+Each [release](https://github.com/blueprintreview/blueprintreview/releases) has prebuilt binaries for Linux (x64, arm64) and Windows (x64): `blueprintreview-<target>.tar.gz` holds the CLI alone, and on Windows `blueprintreview-app-x86_64-pc-windows-msvc.zip` (or the `.msi` installer) holds the [viewer app](#the-viewer-app-blueprintreview-app) and the CLI together. Unpack it into a folder of its own; `SHA256SUMS` has the checksums.
 
-To build from source instead, you need the Rust toolchain. The repo's `rust-toolchain.toml` picks the right version automatically.
+Building from source is for contributors with access to the source repository. You need the Rust toolchain. The repo's `rust-toolchain.toml` picks the right version automatically.
 
 ```sh
 # Run straight from the repo (builds on first use):
@@ -51,13 +53,15 @@ Prints a Blueprint summary as JSON. This is the format the viewer and the diff t
 
 Enum, user-defined struct and data table assets (`UserDefinedEnum`, `UserDefinedStruct`, `DataTable`) work too: the JSON's `blueprint_class` names the asset class, and the asset is in `enums` (its own entry), `structs` (the one at its own path, plus the structs it uses) or `data_table` (`row_struct` and the `rows`, each row's values by the struct's property names). `diff`, `textconv`, `pr-report` and the viewer handle them like Blueprints: a data table's rows are compared by name, field by field.
 
+A level (`.umap`) gives its Level Blueprint (`blueprint_class` `LevelScriptBlueprint`, `path` the level's package). A data asset (an object of a Blueprint class or of a `UDataAsset` class saved as an asset, e.g. `DA_Preset`) has `blueprint_class` `DataAsset`, its class in `parent_class` and its saved values in `defaults`. A Widget Blueprint's designer widgets are in `widgets` (name, class, the panel it's in as `parent`, `is_variable`, `display_label`, `category`): the tree from the root widget in order, then the widgets in no panel. A function's local variables are on its entry node, as `local_variables` (each like a member of `variables`). A redirector left where an asset was moved from fails with `a redirector to /Game/New/BP_Foo.BP_Foo`; dump the target instead.
+
 ```sh
 blueprintreview dump fixtures/4.26/BP_gem.uasset
 ```
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "path": "/Game/Hour_of_Code/Blueprints/BP_gem",
   "blueprint_class": "Blueprint",
   "parent_class": "/Script/Engine.Actor",
@@ -249,11 +253,13 @@ custom vers:  8
 names:        251
 imports:      59
 exports:      34
+contains:     a Blueprint (Blueprint)
 ```
 
 - **saved by**: the engine version and changelist that last saved the asset.
 - **file version**: the package format versions. These decide how the rest of the file is read.
 - **imports**: objects the asset references from elsewhere, such as engine classes or other assets.
+- **contains**: what the package holds: a Blueprint (and its class), a Level Blueprint, an enum, struct or data table asset, a data asset and its class, a redirector and its target, one of a level's external actors, or another asset (not supported).
 - **exports**: objects stored inside this asset, such as the Blueprint, its graphs, nodes and components.
 
 ### `--exports`
@@ -327,7 +333,7 @@ Values that `blueprintreview` can't decode are shown as `<raw N bytes>`. A node'
 blueprintreview check <PATH> <EXPECTED.json> [--nodes]
 ```
 
-Reads the asset and compares the result with a JSON file in the same format. The usual source is the **BlueprintExporter** UE plugin, which exports what the editor itself sees (`plugins/BlueprintExporter/README.md`). It prints every difference with the place where it occurs, and exits with `1` if there are any.
+Reads the asset and compares the result with a JSON file in the same format. The usual source is the **Blueprint Review** UE plugin, which exports what the editor itself sees (`plugins/BlueprintReview/README.md`). It prints every difference with the place where it occurs, and exits with `1` if there are any.
 
 ```sh
 blueprintreview check BP_Fan.uasset Exports/Game/StackOBot/Blueprints/GameElements/BP_Fan.json
@@ -389,20 +395,20 @@ Prints the JSON Schema of the format `dump` writes and `check` reads. The repo k
 
 ## `blueprintreview edit` — Blueprint edit plans (experimental)
 
-> **Experimental:** Blueprint editing (the *Blueprint Edit Automation* plugin, edit plans and
+> **Experimental:** Blueprint editing (the editing part of the *Blueprint Review* plugin, edit plans and
 > `blueprintreview edit`) is experimental. The plan format and the ops may still change between releases, and
 > an edit can fail or need finishing by hand in the editor. Keep the project under source control and review
 > every change before you commit it.
 
 ```sh
-blueprintreview edit validate plan.json --project MyGame.uproject          # offline checks; exit 1 on errors
+blueprintreview edit validate plan.json --project MyGame.uproject          # offline checks and style; exit 1 on errors (--strict-style: on style findings too)
 blueprintreview edit apply plan.json --project MyGame.uproject --dry-run   # through the editor's edit server, or a commandlet
 blueprintreview edit apply plan.json --project MyGame.uproject             # applies (commandlet: saves; live: leaves it for review, --save saves)
 blueprintreview edit ops                                                   # every op and its keys (--json: the plugin's -ListOps form)
 blueprintreview edit schema > edit-plan.schema.json                        # the plan's JSON Schema
 ```
 
-These drive the BlueprintEditAutomation plugin: `BlueprintEditPlan/2` plans that edit Blueprints, user enums,
+These drive the Blueprint Review plugin's BlueprintEditAutomation module: `BlueprintEditPlan/2` plans that edit Blueprints, user enums,
 structs and data tables. A plan uses the same types, node GUIDs and `nodeGuid:pinId` pins that `dump` prints, so
 read an asset with `dump`, write the plan, then `validate` and `apply` it. The plan format, the ops and the hosts
 are in [EDITING.md](EDITING.md).
@@ -410,14 +416,21 @@ are in [EDITING.md](EDITING.md).
 - **`validate`** repeats the plugin's checks: unknown ops and keys, the kind of each key, PinType shapes, the rules
   between keys. With `--project` (or `--content`, the folder `/Game` maps to), it also loads each edited asset and
   checks that the node GUIDs, pin ids, graphs, variables and aliases the plan names exist when each op runs. A pin
-  name the model can't place is a warning: the editor also matches display names.
+  name the model can't place is a warning: the editor also matches display names. It then lists the plan's
+  *style findings* (`style: <rule>: <path>: <message>`): names, tooltips, categories and asset prefixes against
+  the style guides, following the edited Blueprint's own naming where it has one
+  ([EDITING.md](EDITING.md#7-style)). They don't fail the plan unless it says `"style": "strict"` or
+  `--strict-style` is given. `--format json` lists them with the issues, each with a `style` rule id.
 - **`apply`**:
   - validates first;
   - uses the open editor's edit server when `Saved/BlueprintEdit/server.json` says one runs, and a headless
     `-run=BlueprintEdit` commandlet otherwise (`--live` / `--commandlet` force one, `--engine` picks the engine);
   - checks that the report carries this run's nonce and succeeded, and exits with 1 otherwise;
-  - prints each op's result, the GUIDs of what it created, the compile messages, and a `blueprintreview diff`
-    command line for each Blueprint's before/after JSON (`--json` prints the report itself).
+  - prints each op's result, the GUIDs of what it created, the compile messages, the plugin's style findings, and
+    a `blueprintreview diff` command line for each Blueprint's before/after JSON (`--json` prints the report
+    itself);
+  - with `--strict-style`, applies the plan as `"style": "strict"`: any style finding, offline or the plugin's,
+    fails it and nothing is saved.
 
 `edit` needs no license.
 
@@ -496,7 +509,7 @@ blueprintreview pr-report --base origin/main --head HEAD --repo octo/game --pr 1
 - The changes are the head's since its **merge base** with `--base` (`git diff --name-status -M`), so commits that landed on the base branch afterwards don't show. The repository needs that history (in GitHub Actions, check out with `fetch-depth: 0`).
 - Both versions are read from git (`git cat-file`); Git LFS pointers are replaced by their objects through `git lfs smudge`, which downloads them when needed. Enum assets and Blueprint parents are looked for in the working tree (`--dir`, default `.`), as `diff` does.
 - `--pathspec` picks the files (git pathspecs, repeatable; default `*.uasset`).
-- The report starts with the line `<!-- blueprintreview-report assets=N -->`, which the Action uses to find its comment again. Then a table: each changed Blueprint with its path, whether it was added, modified, deleted or renamed, a one-line summary and, given `--viewer-url` and `--repo`, a link to it in the [PR viewer](#pr-viewer-view). Then each modified Blueprint's `diff --format md`, collapsed. Changed assets that aren't Blueprints (textures, enums, levels) are listed in one line; a file that can't be read gets a line with the reason, and the report still succeeds.
+- The report starts with the line `<!-- blueprintreview-report assets=N -->`, which the Action uses to find its comment again. Then a table: each changed Blueprint with its path, whether it was added, modified, deleted or renamed, a one-line summary and, given `--viewer-url` and `--repo`, a link to it in the PR viewer (`/view/`, [ACTION.md](ACTION.md#hosting-the-viewer)). Then each modified Blueprint's `diff --format md`, collapsed. Changed assets that aren't Blueprints (textures, meshes, materials, redirectors) are listed in one line; a file that can't be read gets a line with the reason, and the report still succeeds.
 - `--max-bytes` (default 65000, under GitHub's 65,536-character comment limit) caps the comment: the largest diffs are left out first, with a note, then table rows. `--full-output` writes the whole report too, e.g. for the job summary. `-o` writes the comment to a file instead of stdout.
 - `--svg-dir` writes the changed graphs of each modified Blueprint side by side (as `render --against`), in folders that mirror the assets'.
 - `--cosmetic` lists cosmetic changes too.
@@ -514,7 +527,7 @@ It comes with the CLI in each release's `blueprintreview-app-<target>` archive (
 
 ### Enums, structs and data tables
 
-Opening an enum, user-defined struct or data table asset shows it as a table, as the editor's asset editors list them: an enum's entries (name, display name, value), a struct's fields (name, type, default value, tooltip), a data table's rows with a column per field of the row struct (unsaved values show the field's default). The row struct and the enums are looked up in the project, as for Blueprints. In the diff view the two versions' tables are side by side, each row coloured by what happened to it (added, removed, changed), and *Changes* lists the changed entries, fields or rows.
+Opening an enum, user-defined struct, data table or data asset shows it as a table, as the editor's asset editors list them: an enum's entries (name, display name, value), a struct's fields (name, type, default value, tooltip), a data table's rows with a column per field of the row struct (unsaved values show the field's default), a data asset's saved values (property and value; the others have their class's defaults). The row struct and the enums are looked up in the project, as for Blueprints. In the diff view the two versions' tables are side by side, each row coloured by what happened to it (added, removed, changed), and *Changes* lists the changed entries, fields or rows.
 
 An enum asset dropped onto the window while a Blueprint is open still only supplies its display names to that Blueprint.
 
@@ -559,8 +572,8 @@ Graph controls:
 - **Details** shows the selected node's status and changes (old and new value of each changed field and pin), then the node's details as in the normal view (from the side it was selected on; unchanged nodes too), or a summary of the shown graph.
 - **Revision labels:** the bottom-right corner of each side names the asset and the revision it comes from, as in the editor: `Revision 45dab25b - 19 Jun 2026, 12:33:25 pm` for a version from a git commit, `Local Revision` for the working copy or a file git doesn't know. git runs in the background, so the window opens straight away; until it answers, the labels say `Looking up revision…`.
 - **Swap** exchanges the old and new versions; **Exit diff** goes back to the normal view of the new version.
-- **Report** (in the toolbar) shows the diff as a report instead: every change as a list, in the same wording and colours as *Changes*, then each changed graph's old and new version side by side as one image (the drawing [`blueprintreview render --against`](#blueprintreview-render--graphs-as-svg-images) writes). **Fit width**, 50%, 100% and 200% size the images. **Save as HTML…** writes the report as one file with the images inline, which opens in any browser (on the web it downloads). **Interactive diff** goes back.
-- **Editions:** the free Lite shows every diff as its report; the interactive view, and the Time-lapse, are part of Pro (see `docs/RELEASE_PLAN.md`, "Pricing and tiers"). The window title and a toolbar badge (`LITE` or `PRO`) show which edition runs. The license decides which (see [GUIDE.md](GUIDE.md), "Editions, trial and license"). A license, the 14-day trial from the first launch, or the beta (which unlocks everything until the end of 30 November 2026, `bp_license::BETA_UNTIL`; a first launch in the beta gets its trial after that date) runs as Pro. The toolbar's licence chip names the state (`PRO TRIAL · 12 DAYS`, `BETA`, `LITE`, `PRO`), and its **Activate…** (Lite: **Upgrade…**) button opens the *License* window, which activates a key or links to the pricing; the window title names the state too, and a dismissable bar reminds in the trial's last 3 days and once after. In Lite, *Interactive diff · PRO* and *History · PRO* open that window. `blueprintreview diff` and `render` check the same license. `BLUEPRINTREVIEW_EDITION=lite` or `pro` (on the web `?edition=lite`) overrides it, to try an edition.
+- **Report** (above *Changes*, next to Prev/Next) shows the diff as a report instead: every change as a list, in the same wording and colours as *Changes*, then each changed graph's old and new version side by side as one image (the drawing [`blueprintreview render --against`](#blueprintreview-render--graphs-as-svg-images) writes). **Fit width**, 50%, 100% and 200% size the images. **Save as HTML…** writes the report as one file with the images inline, which opens in any browser (on the web it downloads). **Interactive diff** goes back.
+- **Editions:** the free Lite shows every diff as its report; the interactive view, and the Time-lapse, are part of Pro (see [Editions and licenses](guide/license.md)). The window title and a toolbar badge (`LITE` or `PRO`) show which edition runs. The license decides which (see [GUIDE.md](GUIDE.md), "Editions, trial and license"). A license, the 14-day trial from the first launch, or the beta (which unlocks everything until the end of 30 November 2026, `bp_license::BETA_UNTIL`; a first launch in the beta gets its trial after that date) runs as Pro. The toolbar's licence chip names the state (`PRO TRIAL · 12 DAYS`, `BETA`, `LITE`, `PRO`), and its **Activate…** (Lite: **Upgrade…**) button opens the *License* window, which activates a key or links to the pricing; the window title names the state too, and a dismissable bar reminds in the trial's last 3 days and once after. In Lite, *Interactive diff · PRO* and *History · PRO* open that window. `blueprintreview diff` and `render` check the same license. `BLUEPRINTREVIEW_EDITION=lite` or `pro` (on the web `?edition=lite`) overrides it, to try an edition.
 - **Updates:** once a day at start-up, a release build reads `https://blueprintreview.efenggamedev.com/latest.json` (written by the release workflow). When there's a newer release, *Version X available* appears next to the version label. The label's menu runs the check now, or turns it off (*Check for updates daily*, saved in `%LOCALAPPDATA%\BlueprintReview\Updates.json`). Debug builds don't check unless `BLUEPRINTREVIEW_UPDATE_URL` names a `latest.json`, and the Microsoft Store package never does (the Store updates it).
 
 #### As a git difftool
@@ -603,6 +616,7 @@ The *My Blueprint* panel works like the editor's:
 - **Tooltips:** hovering a name shows its description (the variable's or function's *Tooltip*).
 - **Variable rows:** three columns, lined up across the list: the name, then the type (its icon and name), then an eye that is open when the variable is *Instance Editable*. The type icon shows the container: a pill for a single value, a grid for an array, the set icon, or the map's key and value icons. When a file opens, the panel widens to fit the longest name and type, up to 40% of the window. It never shrinks a panel you widened yourself.
 - **Components:** the Variables section lists the component variables under *Components*, with only their type icon.
+- **Widgets:** in a Widget Blueprint, the Variables section also lists the widgets marked *Is Variable* in the designer, typed as their widget class, in the widget's category (else at the top). Selecting one shows the variable in *Details*, with the widget's class and the panel it sits in.
 - **Copy:** right-click a variable, function or macro and pick *Copy*, or select it and press **Ctrl+C** over the panel. The clipboard gets what the editor's *My Blueprint* copies (`BPVar(...)` for a variable, with its default value; `BPGraph(...)` for a function or macro, with all its nodes), so it pastes into *My Blueprint* in the editor.
 
 The toolbar's **Class Settings** and **Class Defaults** buttons show the Blueprint's own settings in *Details*, as the editor's buttons do; the one shown is highlighted. A file opens on *Class Defaults*.
@@ -706,7 +720,7 @@ Open a project's `Content` folder, or any folder in it, to browse all its Bluepr
 cargo run -p blueprintreview-app -- "D:/Unreal Projects/StackOBot/Content"   # or click "Open Folder…"
 ```
 
-- **Explorer** (left, **Ctrl+Shift+E** shows or hides it): the folder's Blueprint-type assets as a tree under the opened folder's own row, as in VS Code, folders first, each with a › when collapsed and a ⌄ when open. That means Blueprints, Widget and Animation Blueprints, Blueprint Interfaces, macro and function libraries, enums, structs and data tables, and plugin `.json` exports. Every one of them opens in a tab: enums, structs and data tables as their [tables](#enums-structs-and-data-tables). Textures, meshes, levels and other assets aren't listed, and neither are folders without any of these. Each asset has its class's icon. Type in the box to filter by name. **⟳** picks up files changed on disk, and **⊟** collapses every folder. Hovering an asset gives its package, kind and, for an enum, its entries (a struct's field count, a data table's row count). An asset that couldn't be read has a ⚠, and hovering it says why. Files whose header can't be read at all (often textures or meshes saved by a pre-4.25 engine) aren't listed; the *Output Log* names them.
+- **Explorer** (left, **Ctrl+Shift+E** shows or hides it): the folder's Blueprint-type assets as a tree under the opened folder's own row, as in VS Code, folders first, each with a › when collapsed and a ⌄ when open. That means Blueprints, Widget and Animation Blueprints, Blueprint Interfaces, macro and function libraries, enums, structs, data tables, data assets, levels with a Level Blueprint, and plugin `.json` exports. Every one of them opens in a tab: enums, structs and data tables as their [tables](#enums-structs-and-data-tables). Textures, meshes, levels without a Level Blueprint and other assets aren't listed, and neither are folders without any of these. Redirectors aren't listed either, as the Content Browser hides them, but a reference through one (a parent class, an enum) finds the asset it points at. Each asset has its class's icon. Type in the box to filter by name. **⟳** picks up files changed on disk, and **⊟** collapses every folder. Hovering an asset gives its package, kind and, for an enum, its entries (a struct's field count, a data table's row count). An asset that couldn't be read has a ⚠, and hovering it says why. Files whose header can't be read at all (often textures or meshes saved by a pre-4.25 engine) aren't listed; the *Output Log* names them.
 - **Asset tabs:** clicking an asset opens it in a tab of its own above the window, or switches to its tab if it's already open. Each tab keeps its own graph tabs, selection and panels. ✕ or a middle click closes it.
 - **Find in Blueprints** (**Ctrl+Shift+F**, or **🔍 Find in Blueprints** in the toolbar): the [Find in Blueprint](#find-in-blueprint) search, run over every Blueprint in the folder. The results come grouped by asset, and update as you type. Double-clicking a result opens its asset and shows the node, graph, variable or component. **Ctrl+F** still searches only the open Blueprint.
 - **Double-clicking a node goes to its definition in any Blueprint of the folder:**
@@ -727,7 +741,7 @@ Nothing slow runs on the UI thread, so the window stays responsive:
 - **Opening** an asset, with its enums and parents, runs on a worker thread. The tab shows a spinner until the asset is ready. This applies to every open in the desktop app, folder or not: *Open…*, a file dropped on the window or given on the command line, and both sides of `--diff` or a `git difftool -d` pair, whose diff is computed there too. *Diff against…* computes its diff in the background as well. The exceptions are an enum asset or a missing Blueprint parent dropped onto the window, which are read on the spot, and the web build, which reads files asynchronously but extracts them on the page.
 - **Searches** run on worker threads in batches of 16 assets. A new search cancels the running one. A search started while indexing is still going is run again once indexing is done.
 
-On the projects in `d:/Documents/Unreal Projects` (release build, files in the OS cache):
+On four public sample projects (release build, files in the OS cache):
 
 | Project | Files | Blueprint-type assets | Indexed in | Find in Blueprints (one thread) |
 |---|---|---|---|---|
@@ -749,55 +763,9 @@ cargo run -p blueprintreview-app                                 # then click "O
 
 The web build (`cd crates/blueprintreview-app && trunk serve`) supports **Open…** and drag-and-drop.
 
-#### Web demo
+#### In the browser
 
-The [live demo](https://blueprintreview.efenggamedev.com/demo/) is the web build with `fixtures/` staged next to it. `.github/workflows/web-demo.yml` builds it on every push to `main` and deploys `blueprintreview.efenggamedev.com` to the Cloudflare Worker `ue-blueprint-viewer` (`site/wrangler.toml`, `wrangler deploy`): as static assets, the page in `site/public/` at `/`, the user guide at `/docs/` (`scripts/build_docs.py`, from `docs/guide/` and the reference pages), the release notes at `/changelog/`, the [public demo](#public-demo-try) at `/try/`, the demo at `/demo/` and the [PR viewer](#pr-viewer-view) at `/view/`, plus the Worker script for the PR viewer's GitHub sign-in. The landing page (`/`, with `style.css`, `privacy.html`, `img/` and `legal/`, where the deploy copies `EULA.md` and `THIRD-PARTY-NOTICES.md` as `.txt`), `/docs/`, `/changelog/` and `/try/` are public. Everything else sits behind Cloudflare Access, because the demo ships internal fixtures (see `RELEASE_CHECKLIST.md`). After each deploy the workflow checks that `/demo/`, `/demo/fixtures/index.json`, `/view/`, `/auth/login` and `/api/blob` redirect to the Access login, and fails otherwise, and fails unless `/try/` and `/try/fixtures/index.json` answer 200 with only the sample project's files in the manifest; it warns if `/`, `/style.css`, `/privacy.html`, `/changelog/`, `/docs/` or `/legal/EULA.txt` don't answer 200.
-- It opens `5.7/BP_Spawner.uasset` by default. `?file=<folder>/<file>` opens another fixture, e.g. `?file=5.3/BP_Door.uasset`. Adding `&old=<folder>/<file>` opens the diff view against another fixture, e.g. `?file=diff/BP_Cog/new.uasset&old=diff/BP_Cog/old.uasset`.
-- The toolbar's **Samples** menu lists every fixture by folder. Picking one opens it and updates the URL, so you can share the link.
-- **Samples → Diff samples** opens the edited pairs of `fixtures/diff/` in the diff view: two versions of one Blueprint, each saved by the editor.
-- **Samples → Diff against sample** diffs the open Blueprint against any fixture, shown as the old version. Fixtures of the same asset (e.g. `BP_Bot` from another project) are listed first. **Swap** and **Exit diff** keep the URL in step.
-- In the diff view, a sample's corner label shows its path in place of a git revision.
-- A sample's enum assets are loaded when they're staged next to it (`<Enum>.uasset` in the same folder). The manifest lists them under `enums`, so the *Samples* menu doesn't offer them. A sample's Blueprint parent is loaded the same way, when it's a sample in the same folder.
-- **Open…** and drag-and-drop work as in the plain web build.
-
-#### Public demo (`/try/`)
-
-`/try/` is the landing page's *Try it in your browser*: the same web build, with two public projects as its samples instead of `fixtures/` (Epic content, which may not be published): the [demo project](https://github.com/blueprintreview/demo-project), a player character whose history is ten larger changes, and the guide's [sample project](https://github.com/blueprintreview/sample-project). Both are made by `scripts/make_sample_project.py` from edit plans (`--set demo`: `site/demo-project/plans/` and `files/`; the guide's: `docs/guide/sample/`). The workflow clones them with their whole history and LFS objects, and `scripts/stage_sample.py` stages, per `--sample PATH=Folder`, the assets as they are now under `<Folder>/` (one folder, so enum assets are found next to the Blueprints), and a diff pair per asset each commit modified, `diff/<Folder>-<NN>-<Asset>/old.uasset` and `new.uasset` (at the commit's parent and at the commit, with the commit's enum assets beside them), named `<Asset>: <commit subject>` in **Samples → Diff samples**, the projects in the order given. The manifest's `default` is the pair the page opens without `?file=` (`--default`, a commit subject); `?file=` and `&old=` work as in the demo.
-
-```sh
-cd crates/blueprintreview-app && trunk build --release --public-url ./ && cd ../..
-cp -r crates/blueprintreview-app/dist E:/tmp/try && rm -rf E:/tmp/try/fixtures
-python scripts/stage_sample.py --sample E:/dev/projects/BlueprintReviewDemo=Demo --sample E:/dev/projects/BlueprintReviewSample=Sample --default "Player: stamina for sprinting, drained on Tick" E:/tmp/try
-python -m http.server -d E:/tmp/try 8080                    # then open http://localhost:8080/
-```
-
-`stage_sample.py` reads each revision with `git cat-file` and `git lfs smudge`, so a clone needs every revision's LFS objects (`git lfs fetch --all`); it fails on a blob that isn't a package.
-
-To change the demo project, edit or add a plan in `site/demo-project/plans/` (one commit per plan, its `meta.commit`), rebuild it with `python scripts/make_sample_project.py --set demo --out E:/dev/projects/BlueprintReviewDemo --engine "C:/Program Files/Epic Games/UE_5.8" --work E:/tmp/bpedit/host58 --force` (or `--from N`), and force-push it to `blueprintreview/demo-project`. Its plans name the nodes earlier plans made by object name (`{"name": "K2Node_VariableSet_3", "graph": "EventGraph"}`), which every build gives the same, so a plan changed in the middle means checking the ones after it.
-
-#### PR viewer (`/view/`)
-
-`/view/` is the same web build without the fixtures. It opens the links in `pr-report`'s PR comments: the head version of the file, diffed against the base version (an added or deleted file opens alone), with each side's corner label showing its commit. The files come from GitHub through the site's Worker (`site/worker/index.js`): `/api/blob?repo=…&ref=<sha>&path=…` reads the file at that commit as the signed-in user and resolves Git LFS objects, so the viewer only shows what that user can read on GitHub. Without a session, the toolbar shows **Sign in with GitHub** (`/auth/login`, back to the same diff afterwards). Enum assets and the Blueprint parent are fetched from the repository at the same commit, where `DirSource` would find them on disk. Setting the Worker up is described in [ACTION.md](ACTION.md#hosting-the-viewer).
-
-The Worker's tests: `node --test "site/worker/*.test.js"`.
-
-To build it locally:
-
-```sh
-cd crates/blueprintreview-app && trunk build --release --public-url ./ && cd ../..
-python scripts/stage_fixtures.py crates/blueprintreview-app/dist   # copies fixtures/ and writes fixtures/index.json (files, diff pairs, enum assets)
-rm -rf site/dist && cp -r site/public site/dist && cp -r crates/blueprintreview-app/dist site/dist/demo
-mkdir -p site/dist/legal && cp EULA.md site/dist/legal/EULA.txt && cp THIRD-PARTY-NOTICES.md site/dist/legal/THIRD-PARTY-NOTICES.txt
-pip install -r scripts/requirements-docs.txt && python scripts/build_docs.py site/dist   # /docs/
-python -m http.server -d site/dist 8080                      # then open http://localhost:8080/demo/
-```
-
-`stage_fixtures.py` fails on Git LFS pointer files, so run `git lfs pull` first. Without staged fixtures (e.g. under `trunk serve`), there's no **Samples** menu.
-
-One-time hosting setup:
-1. Restrict access **first**: in Cloudflare Zero Trust, *Access → Applications → Add an application → Self-hosted*, with the domain `blueprintreview.efenggamedev.com` and the paths `demo`, `view`, `auth` and `api` (one destination each; every path under them is covered), and an Allow policy for your email addresses. A deploy attaches the custom domain, so without this the demo would go live unprotected. (Until 2026-10-30 the application had no path, covering the whole hostname; narrowing it to these four paths is what makes the landing page public.)
-2. Create an API token with the *Edit Cloudflare Workers* template, covering your account and the `efenggamedev.com` zone (*Zone → Workers Routes → Edit* attaches the custom domain). Add it, and your account ID, as the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Until they exist, the workflow builds but skips the deploy.
-3. The first deploy creates the Worker `ue-blueprint-viewer` if needed, the DNS record and the certificate for `blueprintreview.efenggamedev.com`. The `workers.dev` and preview URLs are off (`site/wrangler.toml`).
+The [public demo](https://blueprintreview.efenggamedev.com/try/) is the web build with two sample projects preloaded: the [demo project](https://github.com/blueprintreview/demo-project), a player character, and the guide's [sample project](https://github.com/blueprintreview/sample-project), with a diff for each commit in their history (**Samples → Diff samples**). `?file=<folder>/<file>` opens one of its files, and `&old=<folder>/<file>` diffs it against another. **Open…** and drag-and-drop open your own files; nothing is uploaded. The links in the [GitHub Action](ACTION.md)'s comments open the same viewer at `/view/`.
 
 ---
 
@@ -957,18 +925,20 @@ blueprintreview cpp --check Content/Blueprints/*.uasset
 ```
 
 ```text
-7 of 23 assets ready (UE 5.7.4)
+58 of 88 assets ready (UE 5.7.4)
 
+blocked /Game/StackOBot/AI/StateTree_Elements/STT_ForgetPlayer -> USTT_ForgetPlayer
+ready   /Game/StackOBot/Blueprints/GameElements/BP_Coin -> ACoin
 ready   /Game/StackOBot/Blueprints/SaveGame/PlayerSaveObject -> UPlayerSaveObject
-blocked /Game/StackOBot/Blueprints/GameElements/BP_Coin -> ACoin
 ...
 
 conversion order:
-  batch 1: /Game/StackOBot/Blueprints/GameElements/BP_PickupSpline, ...
+  batch 1: /Game/StackOBot/AI/BPI_Baddy, /Game/StackOBot/AI/BP_AIController, ...
   batch 2: ...
 
-Events (milestone C4) (9):
-  /Game/StackOBot/Blueprints/GameElements/BP_Coin: EventGraph: Event BeginPlay (E4F7E741…): K2Node_Event is an event node; events convert in milestone C4
+Events (milestone C4) (6):
+  /Game/StackOBot/AI/StateTree_Elements/STT_ForgetPlayer: EventGraph: Event EnterState (F9CF9EDF…): /Script/StateTreeModule.StateTreeTaskBlueprintBase.ReceiveLatentEnterState has no native override a C++ class can use
+  ...
 ```
 
 The causes:
@@ -988,7 +958,7 @@ The causes:
 
 Options:
 - `--engine` picks the engine API table the code targets: UE 5.7 or 5.8 (5.4 and later as tables are generated, see [PLUGIN.md](PLUGIN.md#7-the-engine-api-table-for-the-c-converter)).
-- `--project-api FILE` adds your project's API table, for its C++ classes and its plugins'. Generate it with `scripts/gen_engine_api.py --project` (the project needs the BlueprintExporter plugin). A Blueprint-only project that enables engine plugins the built-in table doesn't cover (the report says *module X isn't in the API table*) can use `scripts/gen_engine_api.py --plugins-of MyGame.uproject --out MyGame.api.tsv`. It enables the same engine plugins in a scratch project and leaves yours untouched.
+- `--project-api FILE` adds your project's API table, for its C++ classes and its plugins'. Generate it with `scripts/gen_engine_api.py --project` (the project needs the Blueprint Review plugin). A Blueprint-only project that enables engine plugins the built-in table doesn't cover (the report says *module X isn't in the API table*) can use `scripts/gen_engine_api.py --plugins-of MyGame.uproject --out MyGame.api.tsv`. It enables the same engine plugins in a scratch project and leaves yours untouched.
 - `--class-name BP_Hero=AHeroCharacter` overrides a type's name. Without it, a name that clashes with an engine type or with another asset of the batch gets the lowest free suffix from 2 (`APawn_2`), with a note. Names are compared as UHT compares them: without the prefix and without case, against engine header names too, since each type is written to `<name without prefix>.h`. So `ST_Objective` and `BP_Objective` can't both be `Objective`. A Blueprint Interface's name ends in `Interface`, as UE's own do: `BPI_CamManager` becomes `UCamManagerInterface` / `ICamManagerInterface` (in `CamManagerInterface.h`), apart from `BP_CamManager` → `ACamManager`. A class an earlier conversion generated from the same asset isn't a clash: the converter reads the `.bpmap.json` sidecars under the project's `Source` folders (and its plugins'), so regenerating `BP_Bot` writes `ABot` again, not `ABot_2`. Generate it into the folder it was generated into before (the command refuses another folder, which would declare the class twice). A Blueprint already migrated onto its generated class (its parent is that class) is blocked: its C++ is the source now.
 - `--format md` writes the report as Markdown for a PR comment, `--format json` as JSON.
 - `--exit-code` exits with `1` when an asset you passed is blocked.
@@ -1010,5 +980,8 @@ Every command exits with code `0` on success and `1` on error, printing the reas
 | `saved by an engine older than UE 4.25` | Re-save the asset in a newer editor. |
 | `saved by a newer engine than this reader supports` | The asset comes from an engine newer than this version of BlueprintReview knows, and its layout changed. Look for an update. |
 | `a Texture2D asset, not a Blueprint` | `dump` only: the asset isn't a Blueprint (the class says what it is). `info` and `props` still work on it. |
+| `a level without a Level Blueprint` | The `.umap` has no Level Blueprint (it was never opened in the level's Blueprint editor). |
+| `a redirector to /Game/New/BP_Foo.BP_Foo` | The asset was moved or renamed and this file only points at its new place. Open that one; the viewer does it for you when the target is in the project. |
+| `not an asset: one of a level's external actors or objects …` | A file under `__ExternalActors__` or `__ExternalObjects__`: one actor of a level saved in its own file. It opens with its level; folder mode skips these folders. |
 
 The viewer app shows the same messages when a file can't be opened, and writes them to its [log](#output-log-and-the-log-file).

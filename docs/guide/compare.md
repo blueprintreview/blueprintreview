@@ -71,6 +71,7 @@ These show as tables, old and new side by side: added rows in green, changed val
 | **Swap** | Exchanges the old and new versions |
 | **Exit diff** | Back to the plain view of the new version |
 | **Report** (above *Changes*) | The same diff as a single page; see below |
+| **Sync** | With the Blueprint Review plugin in the open Unreal editor: the graph, pan, zoom and selection follow the editor's both ways ([the plugin's page](../PLUGIN.md#9-diffs-in-the-blueprintreview-app-and-view-sync)). Shown only when the plugin is found |
 
 The filter box under the summary keeps the rows whose text contains what you type (`Delay`, a variable's name, a
 graph's name).

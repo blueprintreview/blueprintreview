@@ -1,6 +1,6 @@
-# Blueprint Exporter plugin — user guide
+# Blueprint Review plugin — user guide
 
-**Blueprint Exporter** is an Unreal Editor plugin. It writes Blueprints to text files that the BlueprintReview tools (`blueprintreview`, `blueprintreview-app`) read, and that can be diffed, reviewed or archived outside the editor. For each Blueprint it writes:
+**Blueprint Review** is one Unreal Editor plugin (`plugins/BlueprintReview`) with several modules. This guide starts with its exporter, the *BlueprintExport* module. It writes Blueprints to text files that the BlueprintReview tools (`blueprintreview`, `blueprintreview-app`) read, and that can be diffed, reviewed or archived outside the editor. For each Blueprint it writes:
 
 - **`<Blueprint>.json`**: everything in the Blueprint, in the same format as `blueprintreview dump`:
   - variables, components and class defaults;
@@ -14,26 +14,35 @@ You don't need the plugin to *view* Blueprints: `blueprintreview` reads `.uasset
 - **Batch export:** exporting a whole project from the command line, e.g. on a build machine.
 - **Checking `blueprintreview`:** comparing its reading of an asset against the editor's (`blueprintreview check`).
 
-**Editing Blueprints** (by hand, by script or by an AI agent) is the companion plugin's job,
-**Blueprint Edit Automation** (`plugins/BlueprintEditAutomation`): see [EDITING.md](EDITING.md). It's experimental, and it needs
-this plugin enabled.
+The plugin's other modules, all in the same plugin and enabled together:
 
-Supported engines: **UE 5.7 and 5.8** are tested. The code is written to also build on 4.27 and 5.0–5.6, but those haven't been tried yet. The plugin depends on the engine's **Enhanced Input** plugin (enabled by default in UE 5 projects) and enables it.
+| Module | What it does |
+|---|---|
+| `BlueprintExport` | The exporter described here: canonical JSON and T3D, the `BlueprintExport` commandlet and the Content Browser entry. The base the other modules build on. |
+| `BlueprintApiDump` | The engine metadata and API tables behind `blueprintreview cpp` (`-run=BlueprintMetadataDump`). |
+| `BlueprintEditAutomation` | **Editing Blueprints** (by hand, by script or by an AI agent) with edit plans: see [EDITING.md](EDITING.md). It's **experimental**. |
+| `BlueprintReviewLink` | The diff hand-over and view sync with the BlueprintReview app. |
+| `BlueprintConvert` | *Convert to C++…* and the migration and behaviour commandlets: see [CONVERTING.md](CONVERTING.md). |
+| `BlueprintTrace` | Records converted classes' actors in a game run, for the converter's behaviour checks. |
+
+Before 1.2 this was two plugins, *Blueprint Exporter* and *Blueprint Edit Automation*. **Upgrading:** delete `Plugins/BlueprintExporter` and `Plugins/BlueprintEditAutomation` from the project and enable *Blueprint Review* instead (`scripts/deploy_plugin.py` does all of that). A Converter Path saved in the project's user settings is carried over the first time the editor starts with the new plugin.
+
+Supported engines: **UE 5.7 and 5.8**. Other versions haven't been tried; the editing module (`BlueprintEditAutomation`) has no code for older engines. The plugin depends on the engine's **Enhanced Input** plugin (enabled by default in UE 5 projects) and enables it.
 
 ---
 
 ## 1. Install it into a project
 
-> **Not in the beta's downloads:** the Unreal plugins (*Blueprint Exporter* and *Blueprint Edit Automation*) aren't
+> **Not in the beta's downloads:** the Unreal plugin (*Blueprint Review*) isn't
 > distributed with the beta yet. Write to [support@efenggamedev.com](mailto:support@efenggamedev.com) if you'd like
 > to try them.
 
-The plugin source is in the BlueprintReview source repository at `plugins/BlueprintExporter`.
+The plugin source is in the BlueprintReview source repository at `plugins/BlueprintReview`.
 
 ### C++ projects (the project has a `Source/` folder)
 
 1. Close the editor.
-2. Copy `plugins/BlueprintExporter` to `<YourProject>/Plugins/BlueprintExporter`.
+2. Copy `plugins/BlueprintReview` to `<YourProject>/Plugins/BlueprintReview`.
 3. Open the project. The editor offers to build the missing module; click **Yes**. You can also build from your IDE.
 
 ### Blueprint-only projects
@@ -42,11 +51,11 @@ The editor can't compile plugins for a project without C++ code, so use a prebui
 
 ```bat
 "C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\RunUAT.bat" BuildPlugin ^
-    -Plugin="<repo>\plugins\BlueprintExporter\BlueprintExporter.uplugin" ^
-    -Package="D:\Build\BlueprintExporter_5.7" -TargetPlatforms=Win64 -Rocket
+    -Plugin="<repo>\plugins\BlueprintReview\BlueprintReview.uplugin" ^
+    -Package="D:\Build\BlueprintReview_5.7" -TargetPlatforms=Win64 -Rocket
 ```
 
-Then copy `D:\Build\BlueprintExporter_5.7` to `<YourProject>/Plugins/BlueprintExporter`, leaving out its `HostProject` and `Intermediate` folders. A build only works with the engine version it was built for.
+Then copy `D:\Build\BlueprintReview_5.7` to `<YourProject>/Plugins/BlueprintReview`, leaving out its `HostProject` and `Intermediate` folders. A build only works with the engine version it was built for.
 
 ### With the deploy script (from a checkout of this repo)
 
@@ -58,11 +67,11 @@ python scripts/deploy_plugin.py "D:/Documents/Unreal Projects/StackOBot"
 
 It needs Rust (`cargo`) and, for a Blueprint-only project, Visual Studio. It takes the project folder or its `.uproject`, and it:
 
-1. builds `blueprintreview` (`cargo build --release -p blueprintreview-cli`);
-2. installs the plugin to `<Project>/Plugins/BlueprintExporter`. A C++ project gets the source, and the editor builds it when the project opens. A Blueprint-only project gets a `RunUAT BuildPlugin` build for the engine in the `.uproject`'s `EngineAssociation` (`C:/Program Files/Epic Games/UE_<version>`). If a copy is already installed, it's replaced;
-3. copies `blueprintreview.exe` into the plugin's `Tools/` folder;
-4. enables `BlueprintExporter` in the `.uproject` if it isn't enabled yet;
-5. points **Project Settings → Plugins → Blueprint Review → Converter Path** at the copied executable. This is a per-user setting, written to the project's `Saved/Config/WindowsEditor/EditorPerProjectUserSettings.ini`, so nothing machine-specific goes into the project's `Config/`.
+1. builds `blueprintreview` and `blueprintreview-app` (`cargo build --release -p blueprintreview-cli -p blueprintreview-app`);
+2. installs the plugin to `<Project>/Plugins/BlueprintReview` (and removes the old `BlueprintExporter` and `BlueprintEditAutomation` folders, if the project has them). A C++ project gets the source, and the editor builds it when the project opens. A Blueprint-only project gets a `RunUAT BuildPlugin` build for the engine in the `.uproject`'s `EngineAssociation` (`C:/Program Files/Epic Games/UE_<version>`). If a copy is already installed, it's replaced;
+3. copies both executables into the plugin's `Tools/` folder: the converter, and the app the editor's diff hand-over starts;
+4. enables `BlueprintReview` in the `.uproject` if it isn't enabled yet, and drops the old plugins' entries;
+5. points **Editor Preferences → Plugins → Blueprint Review → Converter Path** at the copied executable. This is a per-user setting, written to the project's `Saved/Config/WindowsEditor/EditorPerProjectUserSettings.ini`, so nothing machine-specific goes into the project's `Config/`.
 
 The project then has its own copy of everything. Rebuilding in the repo doesn't affect it until you deploy again.
 
@@ -71,14 +80,14 @@ The project then has its own copy of everything. Rebuilding in the repo doesn't 
 | `--engine DIR` | Use this engine install, not the one named by `EngineAssociation` (needed for a source-built engine). |
 | `--prebuilt` | Build the plugin with RunUAT even for a C++ project, so the editor doesn't have to compile it. |
 | `--build-dir DIR` | Where RunUAT builds (default `E:/tmp/bpexporter/deploy/UE<version>`; the build log goes next to it). |
-| `--skip-cargo` | Copy the existing `target/release/blueprintreview.exe` without rebuilding it. |
-| `--no-cli` | Install only the plugin. The converter and its setting are left as they are. |
+| `--skip-cargo` | Copy the existing release executables in `target/release/` without rebuilding them. |
+| `--no-cli` | Install only the plugin. The converter, the app and the Converter Path are left as they are. |
 
 If the editor still has the plugin loaded, the script stops with *"…is in use; close the editor and run again"*, and the installed copy is left as it was. A project that has gained a `Source/` folder since the last deploy (after a *Convert to C++…*, for example) gets the source copy next time.
 
 ### Check it's enabled
 
-In the editor, open **Edit → Plugins** and search for "Blueprint Exporter". It's under the *Editor* category. Tick **Enabled** if it isn't already, and restart when asked.
+In the editor, open **Edit → Plugins** and search for "Blueprint Review". It's under the *Editor* category. Tick **Enabled** if it isn't already, and restart when asked.
 
 The plugin is editor-only. It isn't included in packaged games.
 
@@ -173,6 +182,8 @@ The editor-only fields:
 
 `friendly_name` is the pin's saved label, so the standalone parser reads it too.
 
+A Widget Blueprint's export also has `widgets`, its designer hierarchy as the editor holds it after loading. `is_variable` there is the widget's own *Is Variable*; the standalone parser reads it when saved and otherwise takes the widget class's default, which it knows for the engine's UMG and CommonUI widgets.
+
 The files are designed to **diff cleanly** in source control:
 - Nodes are sorted by their GUID.
 - Wires are written as `"linked_to": ["<nodeGuid>:<pinId>"]`.
@@ -211,6 +222,23 @@ UnrealEditor-Cmd.exe MyGame.uproject -run=BlueprintExport -ImportT3D=D:/paste.tx
 
 `scripts/plugin_roundtrip.py --t3d` uses it to check `blueprintreview copy`. For every graph it pastes `blueprintreview`'s copy text and the editor's own (the plugin's `.t3d`), each in a fresh editor session, and compares the two pasted graphs with `blueprintreview check --graph`. Pasting changes nodes (they're rebuilt, and names made unique), so the two texts are compared by what they paste to, not by what they say.
 
+### Screenshots of the editor's views
+
+The `BlueprintExport.Shots <list file>` console command takes screenshots of the editor itself, so the viewer can be compared with it (`scripts/parity_audit.py shots` writes the list and the viewer's matching storyboard). It needs a real editor session (no `-nullrhi`). Each line of the list is tab-separated:
+
+| Line | Writes |
+|---|---|
+| `graph <asset> <graph name> <out.png>` | the Blueprint editor on that graph, zoomed to fit (`OpenGraphAndBringToFront`, `ZoomToFit`) |
+| `defaults <asset> <out.png>` | the Blueprint editor showing *Class Defaults* |
+| `diff <old file> <new file or -> <asset> <out>` | the editor's Blueprint diff window (`SBlueprintDiff`) for two versions of the asset: `<out>.png` and `<out>.json`, the differences tree's rows as shown. Each file is loaded as a revision (`DiffUtils::LoadPackageForDiff`), so it has to be under the project's `Saved/` folder; `-` is the asset itself |
+| `quit` | exits the editor |
+
+`<asset>` is a package path (`/Game/A/BP_X`).
+
+```sh
+UnrealEditor.exe MyGame.uproject -ExecCmds="t.IdleWhenNotForeground 0,BlueprintExport.Shots D:/shots.txt"
+```
+
 ---
 
 ## 6. Engine metadata for the viewer
@@ -223,19 +251,19 @@ To regenerate the table after an engine upgrade:
 
 ```sh
 python scripts/gen_engine_table.py \
-    --run "C:/Program Files/Epic Games/UE_5.7" D:/Work/RoundTrip57/RoundTrip.uproject \
-    --run "C:/Program Files/Epic Games/UE_5.8" D:/Work/RoundTrip58/RoundTrip.uproject
+    --all-plugins "C:/Program Files/Epic Games/UE_5.7" \
+    --all-plugins "C:/Program Files/Epic Games/UE_5.8"
 ```
 
-Any project with the plugin enabled works, for example the work projects of `scripts/plugin_roundtrip.py`. To run the commandlet by hand:
+`--all-plugins` is how the shipped files are made: it builds the plugin for that engine, makes a scratch project with every engine plugin that supports Win64 enabled (Mover, CommonUI, SmartObjects, Chooser, Control Rig…), and drops any plugin the editor fails to load, so the table covers what the engine and its plugins declare. `--reuse-plugin` skips the build when the plugin is already in the work folder. Your project's own C++ isn't in it (see the known limitation in `docs/ROADMAP.md`). `--run ENGINE PROJECT` dumps from a project of yours instead, with the plugin enabled. To run the commandlet by hand:
 
 ```bat
 UnrealEditor-Cmd.exe MyGame.uproject -run=BlueprintMetadataDump -Out=D:\engine_table.tsv -Defaults=D:\engine_defaults.json
 ```
 
-The table covers every Blueprint-visible function, class (with its `DefaultToInstanced` / `Interface` flags and the interfaces it implements), struct display name, native enum entry display name (where it isn't the entry's own name), StandardMacros entry and input key name in the modules the editor loads. It also has the compiled flags of a variable of each struct and each other type kind. The commandlet gets them by creating the variable's property with the Kismet compiler's own code (`FKismetCompilerUtilities::CreatePropertyOnScope`) and linking it. It's sorted and has no timestamps, so regenerating it with the same engine gives the same file.
+The table covers every Blueprint-visible function, class (with its `DefaultToInstanced` / `Interface` flags and the interfaces it implements), struct display name, native enum entry display name (where it isn't the entry's own name), StandardMacros entry and input key name in the modules the editor loads, each Blueprint-callable function's parameters (direction, pin type, `CPP_Default_` value, advanced and hidden pins: the pins the editor adds when it rebuilds a node) and the display names of `BlueprintAssignable` delegates. It also has the compiled flags of a variable of each struct and each other type kind. The commandlet gets them by creating the variable's property with the Kismet compiler's own code (`FKismetCompilerUtilities::CreatePropertyOnScope`) and linking it. It's sorted and has no timestamps, so regenerating it with the same engine gives the same file.
 
-`-Defaults=` also writes the class defaults: for every class a Blueprint can derive from and every component class (with their ancestors), its parent, its editable properties and its default subobjects (Character's capsule, mesh and movement component). A class lists the properties it declares with their whole value and `Category`, and the inherited ones its constructor changed as a delta from its parent's, so the file stays small (about 2 MB, 150 KB compressed). `gen_engine_table.py` keeps the newest engine's; the viewer's *Class Defaults* says which engine that is when the asset was saved by another.
+`-Defaults=` also writes the class defaults: for every class a Blueprint can derive from and every component class (with their ancestors), its parent, its editable properties and its default subobjects (Character's capsule, mesh and movement component). A class lists the properties it declares with their whole value, `Category`, `DisplayName` and whether they're advanced (`CPF_AdvancedDisplay`), and the inherited ones its constructor changed as a delta from its parent's, so the file stays small (about 4.4 MB with every engine plugin). The animation graph and state machine node classes (editor-only, `AnimGraphNode_*`, `AnimState*`) are in it too, for an anim node's *Details*, and a `structs` map lists, per `FAnimNode_*` struct those nodes edit, its editable fields with their `Category`, `DisplayName`, advanced flag and pin metadata (`PinShownByDefault`, `PinHiddenByDefault`, `NeverAsPin`, `AlwaysAsPin`). `gen_engine_table.py` keeps the newest engine's; the viewer's *Class Defaults* says which engine that is when the asset was saved by another.
 
 ---
 
@@ -312,11 +340,11 @@ The dialog checks when it opens: it lists each asset as ready or blocked, with t
 
    If the build fails, nothing is migrated. The runner shows `build.log` instead of opening the editor, since the project's module doesn't build. To go back, delete the output folder and its block in `Build.cs`.
 
-The converter is found through **Project Settings → Plugins → Blueprint Review → Converter Path**, or as `blueprintreview` on `PATH` when that's empty. `scripts/deploy_plugin.py` sets it ([section 1](#with-the-deploy-script-from-a-checkout-of-this-repo)). The dialog remembers its choices per user (`EditorPerProjectUserSettings`). Windows only, like the rest of the plugin's build steps.
+The converter is found through **Editor Preferences → Plugins → Blueprint Review → Converter Path**, or as `blueprintreview` on `PATH` when that's empty. `scripts/deploy_plugin.py` sets it ([section 1](#with-the-deploy-script-from-a-checkout-of-this-repo)). The dialog remembers its choices per user (`EditorPerProjectUserSettings`). Windows only, like the rest of the plugin's build steps.
 
 ### The game trace: `BlueprintTrace`
 
-The plugin's second module, `BlueprintTrace` (uncooked only: it loads in `-game` from the editor binary and in PIE), records the actors of the converted classes while the game runs. `scripts/trace_diff.py` diffs two recordings:
+The plugin's `BlueprintTrace` module (uncooked only: it loads in `-game` from the editor binary and in PIE), records the actors of the converted classes while the game runs. `scripts/trace_diff.py` diffs two recordings:
 
 ```sh
 UnrealEditor.exe MyGame.uproject /Game/Maps/Level1 -game -nullrhi -deterministic -benchmark -fps=30     -BlueprintTrace=E:/tmp/trace.json -TraceMap=Source/MyGame/Converted [-TraceFrames=600] [-TraceEvery=15] [-TraceInput=input.json]
@@ -330,6 +358,13 @@ UnrealEditor.exe MyGame.uproject /Game/Maps/Level1 -game -nullrhi -deterministic
 - **In PIE:** `BlueprintTrace.Start <out.json>` on the console traces the session (the frame settings come from the command line).
 
 ---
+
+## 9. Diffs in the BlueprintReview app, and view sync
+
+The `BlueprintReviewLink` module (editor only) does two things:
+
+- **Diff hand-over.** Every Blueprint diff the editor starts (Content Browser *Diff Selected*, Revision Control *Diff Against Depot*, the History window, the Blueprint editor's *Diff* menu) opens `blueprintreview-app --diff` instead of the built-in window, with the revision labels (git hash, or `#3 (CL 120)` for Perforce). It registers a diff action for `UBlueprint` and each Blueprint class (`IAssetTools::RegisterAssetTypeActions`); opening, thumbnails and menus stay with the class's asset definition. The built-in window is used when the app is not found, a side has unsaved changes (the app reads files, not the editor's memory) or the app fails to start. The app is looked up in *Editor Preferences > Plugins > Blueprint Review Link > App Path*, the plugin's `Tools` folder, then `PATH`. `BlueprintReview.Diff /Game/A /Game/B` in the console starts the same diff.
+- **View sync.** A server on `127.0.0.1` (first free port from 17630) writes `Saved/BlueprintReview/link.json` (port, token). The app's *Sync* toggle in the diff view uses it: `GET /view?asset=/Game/X` is the active graph of the editor that has that Blueprint open, never another editor (without `asset`: the editor in the active window) (asset, graph names, view centre and zoom in graph coordinates, selected node GUIDs), `POST /view` opens the Blueprint if needed, shows the graph, centres the view and selects nodes. Every request needs `Authorization: Bearer <token>`. Switch it off with *Sync Server* in the same preferences; *Poll Interval Ms* and *Send Interval Ms* there set how often the app asks for the editor's view and sends its own (`GET /status` returns them as `poll_ms` and `send_ms`; the app reads them when Sync is switched on). An editor in the background slows to 3 frames a second (*Editor Preferences > Performance > Use Less CPU when in Background*), and the server only answers on a frame, so each request would wait up to a third of a second; *Keep Editor Awake* (on by default) keeps the editor at its normal rate while the app is asking, and lets it slow down two seconds after the app stops (`UEditorEngine::ShouldDisableCPUThrottlingDelegates`).
 
 ## Troubleshooting
 

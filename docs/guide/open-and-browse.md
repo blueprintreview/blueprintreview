@@ -25,17 +25,24 @@ in a tab; other graphs open in tabs of their own when you double-click them in *
 | Fit the graph to the window | <kbd>F</kbd> or <kbd>Home</kbd>, with the pointer over the graph |
 | Select nodes | Click; <kbd>Shift</kbd>+click adds, <kbd>Ctrl</kbd>+click toggles; drag on empty space draws a box |
 | Open what a node calls | Double-click it: a function call opens the function, a macro its graph, a collapsed node its graph |
+| Open a state machine, state or transition rule | Double-click it in an Animation Blueprint: its graph opens in the same tab, and the path above the graph (*AnimGraph › Locomotion › Idle to Walk (rule)*) goes back up. Hover a transition to read its rule |
 | Show advanced pins | Click the arrow at the bottom of the node; click it again to hide them |
 | Go back | <kbd>Alt</kbd>+<kbd>Left</kbd>, the back mouse button, or the ← arrow at the top left |
 
 ## The panels
 
-- **Components** lists the components the Blueprint adds, as a tree. Click one to see its properties in
-  *Details*. The top row, *(Self)*, shows the class defaults.
+- **Components** lists the components, as a tree: the ones a C++ parent class adds (a Character's capsule, mesh
+  and movement component), then the Blueprint's own. Click one to see its properties in *Details*. The top row,
+  *(Self)*, shows the class defaults. Components from your project's own C++ classes aren't listed yet: see
+  [Troubleshooting](troubleshooting.md#components-from-a-c-parent-class-are-missing).
 - **My Blueprint** lists the graphs, functions, macros, variables and event dispatchers, by category. Click a
-  variable or function to see it in *Details*; double-click a graph or function to open it.
-- **Details** shows what's selected: a variable's type, flags and default, a function's inputs and outputs, a
-  node's pins and properties, or a component's properties.
+  variable or function to see it in *Details*; double-click a graph or function to open it. While a function's
+  tab is shown, *Local Variables* at the bottom lists that function's local variables.
+- **Details** shows what's selected: a variable's type, flags and default, a function's inputs and outputs, or a
+  component's properties. A node shows what the editor shows for it: a variable get or set its variable, a
+  function's entry or a custom event its signature, other nodes nothing. To see a node's class, GUID, pins and saved
+  properties too, turn on **Developer Settings** → *Show node internals in Details* in the version label's menu at
+  the top right.
 - **Class Defaults** and **Class Settings** at the top show the Blueprint's defaults (with the values it inherits,
   dimmed) and its class settings (parent class, interfaces, options).
 

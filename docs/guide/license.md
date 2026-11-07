@@ -12,6 +12,9 @@
 | Time-lapse | | ✓ |
 | `blueprintreview diff` and `blueprintreview render` | | ✓ |
 
+The GitHub Action's pull-request comment is free for every repository. The interactive diff viewer its links open will
+come with Team, when it ships.
+
 A new install runs as Pro for **14 days**, with nothing to register. After that it runs as Lite until you activate
 a license. During the beta, until the end of 30 November 2026, everything is unlocked; the 14 days start when the beta ends,
 if you first started BlueprintReview during it.

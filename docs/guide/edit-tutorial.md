@@ -1,6 +1,6 @@
 # Your first edit plan
 
-> **Experimental:** Blueprint editing (the *Blueprint Edit Automation* plugin, edit plans and
+> **Experimental:** Blueprint editing (the editing part of the *Blueprint Review* plugin, edit plans and
 > `blueprintreview edit`) is experimental. The plan format and the ops may still change between releases, and
 > an edit can fail or need finishing by hand in the editor. Keep the project under source control and review
 > every change before you commit it.
@@ -15,12 +15,12 @@ way; its `EditPlans/` folder has the plans.
 
 ## Before you start
 
-> **Not in the beta's downloads:** the Unreal plugins (*Blueprint Exporter* and *Blueprint Edit Automation*) aren't
+> **Not in the beta's downloads:** the Unreal plugin (*Blueprint Review*) isn't
 > distributed with the beta yet. Write to [support@efenggamedev.com](mailto:support@efenggamedev.com) if you'd like
-> to try them.
+> to try it.
 
 - **UE 5.7 or 5.8** installed. The plan runs in a headless editor (a commandlet); the editor window never opens.
-- **The plugins in the project:** *Blueprint Edit Automation* and *Blueprint Exporter*, built for your engine
+- **The plugin in the project:** *Blueprint Review*, built for your engine
   version, in the project's `Plugins/` folder ([UE plugin](../PLUGIN.md)).
 - **The project closed in the editor**, and the files writable (checked out, in Perforce).
 - [The sample project](get-the-sample.md), if you follow along with it.
@@ -36,7 +36,8 @@ blueprintreview dump Content/Sample/BP_CoinSpawner.uasset > before.json
 
 In `before.json`, the `SpawnCoin` graph starts with a `K2Node_FunctionEntry` node whose `then` pin leads to a
 `K2Node_SpawnActorFromClass`. That's where the Branch goes. Opening the Blueprint in BlueprintReview shows the same;
-a node's *Details* list its class and pin names.
+with **Developer Settings** → *Show node internals in Details* on (the version label's menu), a node's *Details*
+list its class and pin names.
 
 ## 2. Write the plan
 
@@ -86,7 +87,7 @@ blueprintreview edit validate spawner-switch.json --project BlueprintReviewSampl
 ```
 
 This runs offline, in a second: the plan's shape, the op keys, and that the graphs, nodes and pins it names exist
-in the project's assets. It prints `0 error(s), 0 warning(s)`.
+in the project's assets. It prints `spawner-switch.json: 0 error(s), 0 warning(s), 0 style finding(s)`.
 
 ## 4. Try it
 
@@ -136,7 +137,7 @@ Commit it when it looks right, or `git checkout -- Content` to throw it away.
 
 If the project is open in the editor, `edit apply` uses the editor instead (its edit server, on by default): the
 edits appear in the open Blueprint, unsaved, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the whole plan. Add `--save`
-to save them. See the [edit server](../EDITING.md#8-the-edit-server).
+to save them. See the [edit server](../EDITING.md#9-the-edit-server).
 
 ## Related
 

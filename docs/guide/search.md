@@ -2,7 +2,8 @@
 
 Find where a variable, function, event or node is used: in the open Blueprint with **Find**, or in every Blueprint
 of a folder with **Find in Blueprints**. Both search what the editor's searches do: node titles, pin names and
-default values, comments, variables, functions, components and their types.
+default values, comments, variables, functions, components and their types, inside collapsed graphs, state
+machines, states and transition rules too.
 
 ## Search the open Blueprint
 
@@ -14,7 +15,10 @@ default values, comments, variables, functions, components and their types.
 4. Double-click a result to jump to it: its graph opens and the node is selected and framed.
 
 To find where something in *My Blueprint* is used (a variable, a function, an event, a component), right-click it
-and choose **Find References**: *Find Results* opens with its name searched.
+and choose **Find References**: *Find Results* lists the nodes that use it, under their graphs. On the graph,
+right-click a variable's get or set node for the same (a local variable's, an inherited one's or another class's
+too). It finds that member only, not everything whose name contains its name: *Health* doesn't find *MaxHealth*.
+Pressing <kbd>Enter</kbd> in the search box afterwards searches for the text instead.
 
 ![Find Results for TotalScore in BP_ScoreGameMode: each node that reads or sets it, under its graph](img/find.jpg)
 

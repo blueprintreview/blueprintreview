@@ -10,8 +10,8 @@
 | *saved by an engine older than UE 4.25* | Re-save the asset in a newer editor |
 | *unsupported package* | The asset was saved in a form BlueprintReview doesn't read yet. Please send it to us, with the engine version |
 
-Widget Blueprints and Animation Blueprints open, with their event graphs and functions; their Designer and AnimGraph
-views aren't shown.
+Widget Blueprints and Animation Blueprints open, with their event graphs and functions, and an Animation
+Blueprint's AnimGraph, state machines and transition rules. A Widget Blueprint's Designer isn't shown.
 
 ## Enum values show as NewEnumerator0
 
@@ -23,6 +23,25 @@ it can't, a ⚠ in the toolbar lists what's missing; dropping the enum's `.uasse
 
 A Blueprint's parent Blueprint holds the values it inherits. Open the folder the Blueprints are in, or drop the
 parent's `.uasset` onto the window. A note in *Class Defaults* says when the parent wasn't found.
+
+## Components from a C++ parent class are missing
+
+BlueprintReview knows what the Unreal Engine's own C++ classes add, from a copy of the stock UE 5.8 classes that
+ships with it, not from your project. So, for now:
+
+- **A Blueprint based on your project's own C++ class** (or a plugin's) lists only the components the Blueprint
+  adds, not the ones the C++ class creates, nor the ones it inherits from an engine class such as `Character`. A
+  component of yours attached to one of them shows under its name alone.
+- **A modified engine:** the components and inherited values shown are the stock engine's. What your engine changes
+  (a component added, removed or attached elsewhere, a different default) doesn't show.
+- **Another engine version:** the list is UE 5.8's, which is usually the same as your engine's.
+
+The same goes for the inherited values in *Class Defaults* and in a C++ component's *Details*: those come from
+the stock engine classes too. Open the Blueprint in the Unreal editor to see them as your project has them.
+
+Node titles have the same limit: a node calling a function of your project's own C++ shows the function's name
+made readable (*Conv String to Model Part Guid*), not the display name the C++ gives it, and its pins are the ones
+the asset saved. Functions of the engine and of the plugins that ship with it show as in the editor.
 
 ## A Blueprint looks wrong
 
