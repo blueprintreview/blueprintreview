@@ -116,5 +116,6 @@ In the sample's folder (after [getting it](get-the-sample.md)):
 ## Related
 
 - [Compare two versions](compare.md): reading the diff view.
+- [Merge two branches](merge.md): when `git merge` stops on a Blueprint.
 - [Time-lapse](timelapse.md): an asset's history, step by step.
 - [Review pull requests](review-prs.md) on GitHub.

@@ -80,9 +80,25 @@ Run `blueprintreview p4-setup`; it prints these steps with your install path fil
 
 *Diff Against Have Revision*, *Diff Against Previous* and the diffs in the *History* tab then open in BlueprintReview.
 
-## 6. Editions, trial and license
+## 6. Merge two branches of a Blueprint
 
-BlueprintReview comes in two editions. **Lite** is free: it opens and searches Blueprints, copies nodes, and shows diffs as a report. **Pro** adds the interactive diff, the Time-lapse history, and the `blueprintreview diff` and `blueprintreview render` commands.
+> **Experimental:** the merge view is experimental. Keep the project under source control, and look at the merged
+> Blueprint in the editor before you commit it.
+
+When two branches both changed a Blueprint, `git merge` stops with a conflict on the `.uasset`. BlueprintReview's merge view takes every change only one side made, lists the conflicts (both sides changed the same thing differently), lets you pick a side or type a value for each, and shows the merged Blueprint before anything is written. Set it up as git's merge tool once, in your repository (it also makes a conflicted `.uasset` keep your version, with Git LFS too):
+
+```sh
+blueprintreview git-setup
+git mergetool -t blueprintreview -- Content/BP_Hero.uasset
+```
+
+Theirs, the result and ours are side by side; **Conflicts** on the left lists the choices. **Apply merge** writes the result into the asset through Unreal (UE 5.7 or 5.8, with the BlueprintReview plugin enabled in the project), after a dry run that stops if the merge doesn't compile. Writing a merge is **experimental**: keep the project under source control and look at the result in the editor before you commit. Some changes (inside a state machine, an added timeline, ...) can be previewed but not written yet. The merge view and `blueprintreview merge` are part of Pro.
+
+The user guide's [Merge two branches](https://blueprintreview.efenggamedev.com/docs/merge/) goes through it step by step, with Perforce and what isn't supported yet; the [command-line reference](https://blueprintreview.efenggamedev.com/docs/cli/#blueprintreview-merge--merge-two-changed-versions) has `blueprintreview merge` for scripts.
+
+## 7. Editions, trial and license
+
+BlueprintReview comes in two editions. **Lite** is free: it opens and searches Blueprints, copies nodes, and shows diffs as a report. **Pro** adds the interactive diff, the Time-lapse history, the merge view, and the `blueprintreview diff`, `blueprintreview merge` and `blueprintreview render` commands.
 
 A new install runs as Pro for 14 days, with nothing to register. After that it drops back to Lite until you activate a license. During the beta, everything is unlocked.
 
@@ -104,17 +120,17 @@ To activate a license:
 
 Activation happens once per computer. It sends the key and an anonymous machine ID: a hash, never your machine's name. After that, the license is checked offline. A Pro key works on two computers at once (say a desktop and a laptop), and a Team key on as many as it has seats. To move a license to another computer, choose **Remove license** on the old one first; that frees its place. If a computer is gone for good, write to support@efenggamedev.com and we'll free it.
 
-## 7. Updates
+## 8. Updates
 
 Once a day, at start-up, BlueprintReview reads the newest version number from `blueprintreview.efenggamedev.com`. When a newer version is out, a *Version X available* button appears next to the version number and opens the download page. Nothing is installed automatically. To turn the check off, untick **Check for updates daily** in the version number's menu. Installed from the Microsoft Store, BlueprintReview doesn't check: the Store updates it.
 
 Apart from this check and license activation, BlueprintReview makes no network calls. Your assets never leave your machine.
 
-## 8. When something goes wrong
+## 9. When something goes wrong
 
 - **"a cooked asset":** the file comes from a packaged build, and cooking strips the graphs. Open the asset from the project's `Content` folder instead.
 - **"a Git LFS pointer, not the asset":** the real file hasn't been downloaded yet. Run `git lfs pull`.
 - **Components missing from *Components*:** the components a C++ parent class adds are known only for the stock
   engine's classes (from UE 5.8). A Blueprint based on your project's own C++ class doesn't list that class's
   components, and on a modified engine the components and inherited defaults shown are the stock engine's.
-- **Something looks wrong or the app crashes:** click **Output Log** at the top right, or press ``Ctrl+` ``. The log file is in `%LOCALAPPDATA%\BlueprintReview\Logs`. Please attach `BlueprintReview.log` when you write to support@efenggamedev.com.
+- **Something looks wrong or the app crashes:** click **Output Log** at the top right, or press ``Ctrl+` ``. The log file is in `%LOCALAPPDATA%\BlueprintReview\Logs` (Microsoft Store version: `%LOCALAPPDATA%\Packages\<BlueprintReview's package>\LocalState\BlueprintReview\Logs`; *Help → Open log folder* opens it). Please attach `BlueprintReview.log` when you write to support@efenggamedev.com.

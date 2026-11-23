@@ -53,7 +53,8 @@ If it doesn't find it, or your server needs a login:
 4. Click **Accept Settings**. If the server asks for a login, the window asks for your password and logs you in
    (`p4 login`).
 
-The settings are saved in `%LOCALAPPDATA%\BlueprintReview\SourceControl.json`. The app needs the `p4` command-line
+The settings are saved in `%LOCALAPPDATA%\BlueprintReview\SourceControl.json` (the Microsoft Store version: in its
+own app data folder, beside the log folder). The app needs the `p4` command-line
 program, which P4V's installer puts on your `PATH`.
 
 ## Troubleshooting
@@ -71,3 +72,4 @@ We'd like to hear how this works with your server: write to
 
 - [Time-lapse: an asset's history](timelapse.md)
 - [Compare two versions](compare.md)
+- [Merge two branches](merge.md#with-perforce): when a resolve can't merge a Blueprint

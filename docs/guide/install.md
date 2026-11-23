@@ -9,6 +9,13 @@ BlueprintReview runs on Windows 10 and 11 (64-bit). The command-line tool, `blue
   links to two files: the installer (`.msi`) and a zip.
 - You don't need Unreal Engine installed, or administrator rights for a normal install.
 
+## Install from the Microsoft Store
+
+Get BlueprintReview from its [Microsoft Store page](https://apps.microsoft.com/detail/9N9W75PDPVWX) and click
+**Install**. The Store version is signed, so SmartScreen doesn't ask, and the Store keeps it up to date. It puts
+`blueprintreview` and `blueprintreview-app` on your `PATH` and adds BlueprintReview to Explorer's *Open with* list
+for `.uasset` files. Use the installer below instead if your PC blocks the Store.
+
 ## Install with the installer
 
 1. Run `blueprintreview-app-x86_64-pc-windows-msvc.msi`.
@@ -66,8 +73,10 @@ To turn the check off, click the version number at the top right and untick **Ch
 
 ## Uninstall
 
-*Settings → Apps → Installed apps → BlueprintReview → Uninstall*. For the zip, delete its folder. Your settings and
-logs are in `%LOCALAPPDATA%\BlueprintReview`; delete that folder too to remove everything.
+*Settings → Apps → Installed apps → BlueprintReview → Uninstall*. For the zip, delete its folder. Your settings,
+license and logs are in `%LOCALAPPDATA%\BlueprintReview`; delete that folder too to remove everything. The Microsoft
+Store version keeps them in its own app data folder (`%LOCALAPPDATA%\Packages\<BlueprintReview's package>\LocalState\BlueprintReview`), which Windows deletes
+when you uninstall it.
 
 ## Next
 

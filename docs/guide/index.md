@@ -31,6 +31,7 @@ BlueprintReview only reads files. Nothing you open is changed, uploaded or sent 
 | See what changed between two versions | [Compare two versions](compare.md) |
 | Review a commit or a branch | [Review changes in git](review-git.md) |
 | Review a changelist | [Review changes in Perforce](review-perforce.md) |
+| Merge a Blueprint two branches changed (experimental) | [Merge two branches](merge.md) |
 | See how an asset changed over time | [Time-lapse](timelapse.md) |
 | Review Blueprint changes in a pull request | [Review pull requests](review-prs.md) |
 | Send a diff to someone without BlueprintReview | [Share a diff](share.md) |
@@ -41,9 +42,9 @@ BlueprintReview only reads files. Nothing you open is changed, uploaded or sent 
 ## Lite and Pro
 
 BlueprintReview has two editions. **Lite** is free: it opens and searches Blueprints, copies nodes, and shows a
-diff as a report. **Pro** adds the interactive side-by-side diff, Time-lapse, and the `blueprintreview diff` and
-`blueprintreview render` commands. A new install runs as Pro for 14 days. Pages mark what needs Pro;
-[Editions and licenses](license.md) has the details.
+diff as a report. **Pro** adds the interactive side-by-side diff, Time-lapse, the merge view, and the
+`blueprintreview diff`, `blueprintreview merge` and `blueprintreview render` commands. A new install runs as Pro
+for 14 days. Pages mark what needs Pro; [Editions and licenses](license.md) has the details.
 
 ## Help
 

@@ -59,7 +59,8 @@ the asset saved. Functions of the engine and of the plugins that ship with it sh
 ## The app doesn't start, or crashes
 
 If BlueprintReview crashes, a dialog says so and names its log. The logs are in
-`%LOCALAPPDATA%\BlueprintReview\Logs`: `BlueprintReview.log` for the current run, the five before it as backups.
+`%LOCALAPPDATA%\BlueprintReview\Logs` (the Microsoft Store version keeps them in `%LOCALAPPDATA%\Packages\<BlueprintReview's package>\LocalState\BlueprintReview\Logs`;
+**Help → Open log folder** opens it): `BlueprintReview.log` for the current run, the five before it as backups.
 Starting BlueprintReview again moves the crashed run's log to the newest `BlueprintReview-backup-*.log`.
 
 If one file trips over a bug, that file shows *ran into an internal error* instead of opening, and the rest of the

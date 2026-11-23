@@ -6,6 +6,7 @@
 |---|---|
 | [`blueprintreview dump`](#blueprintreview-dump--blueprint-as-json) | Prints the Blueprint as JSON: variables, graphs, components and class defaults |
 | [`blueprintreview diff`](#blueprintreview-diff--what-changed-between-two-versions) | Shows what changed between two versions of a Blueprint, as Markdown for a PR comment or as JSON |
+| [`blueprintreview merge`](#blueprintreview-merge--merge-two-changed-versions) | Merges two changed versions of a Blueprint against their common ancestor, lists the conflicts, and writes the result with the Unreal plugin (experimental) |
 | [`blueprintreview render`](#blueprintreview-render--graphs-as-svg-images) | Draws graphs as SVG images; with `--against`, the changed graphs' old and new versions side by side |
 | [`blueprintreview info`](#blueprintreview-info--package-summary) | Prints package facts: which engine saved it, and what it contains |
 | [`blueprintreview props`](#blueprintreview-props--raw-property-tree) | Prints every stored property of the objects in the file, for low-level inspection |
@@ -207,6 +208,37 @@ blueprintreview diff old.uasset Content/BP_Hero.uasset
 `--exit-code` exits with `1` when there are changes other than cosmetic ones, like `git diff --exit-code`. Without it, `diff` exits with `0` whatever it finds.
 
 To make plain `git diff` and `git difftool` understand `.uasset` files, see [`blueprintreview textconv`](#blueprintreview-textconv--blueprints-in-git-diff) and [the diff view as a difftool](#as-a-git-difftool).
+
+---
+
+## `blueprintreview merge` — merge two changed versions
+
+> **Experimental:** the three-way merge is experimental, reading as well as writing. Keep the project under source
+> control and review the merged Blueprint before you commit it.
+
+```sh
+blueprintreview merge <BASE> <OURS> <THEIRS> [--format md|json] [--resolve FILE] [--exit-code] [--plan FILE]
+                      [--project X.uproject] [-o MERGED --project X.uproject [--engine DIR] [--live|--commandlet]]
+```
+
+Merges two versions of a Blueprint that both changed since their common ancestor, and lists what is left to decide. The arguments are git's `%O %A %B` (base, ours, theirs); each is a `.uasset` file or a JSON export. Items are matched as `diff` matches them, and each value follows the three-way rule: changed on one side takes that side, the same change on both is no conflict, different changes are a **conflict**. A conflict keeps ours until you choose. Without `-o`, this is a report: no asset is written.
+
+- The enums, user structs (a data table's row struct) and parent Blueprints the three versions use are looked for beside each file, then beside `OURS`, then in `MERGED`'s project at their package path (with `-o`), or in `--project`'s Content folder (without `-o`, e.g. for `--plan`): the three may be copies outside the project (a merge tool's temporary files).
+- A missing or zero-byte `BASE` means there is no ancestor (git's file-added-on-both-sides case): both sides are treated as added, and `note: no base; both sides treated as added` goes to stderr.
+- `--resolve FILE` reads your choices as JSON, keyed by the conflict's path from the report: `{ "defaults[Speed]": {"take": "theirs"} }`. `take` is `ours`, `theirs` or `both` (where the conflict accepts it), or `value` with a `"value"` of the item's type. A key can also be a change merged's path (`changes[].path` in `--format json`): `ours` or `theirs` there overrides that change, taking that side's version instead (`ours` on a default theirs changed keeps ours' value, on a node theirs added leaves it out). `both` or `value` there is refused: the change stands and its row says why (`override not applied: …`). A key that names neither a conflict nor a change is a warning (`choice for <path> matches no conflict or change merged`).
+- `--exit-code` exits with `1` when conflicts are left without a choice. Without it, `merge` exits with `0` whatever it finds.
+- `--plan FILE` also writes the merge as an edit plan (`BlueprintEditPlan/2`, the format of `blueprintreview edit`; experimental) that turns `OURS` into the merged Blueprint, for the BlueprintReview plugin to apply to your copy in the editor (`blueprintreview edit apply FILE --project X.uproject`). The report still prints as usual. The plan pastes the nodes the merge adds to ours with their GUIDs kept, wires them, sets values, removes what the merge drops and ends with a compile. Every conflict needs a choice first: with conflicts left, `merge` prints `error: N conflicts unresolved; resolve them (--resolve) before writing a plan`, writes no file and exits with `1`. A merged change no edit op can write yet (an added animation graph, a pin added by no op, ...) also exits with `1`, naming its path and what the plan can't write; nothing is written then either. Check the plan with `blueprintreview edit validate FILE` before applying it.
+- `-o MERGED --project X.uproject` writes the merged Blueprint (experimental, like editing). When `MERGED` holds Git LFS pointer text rather than an asset (a conflicted LFS file merged without `merge=binary`, which [`git-setup`](#blueprintreview-git-setup--set-git-up-for-blueprints) adds), `merge` notes `MERGED holds Git LFS pointers with conflict markers, not an asset` and copies ours over it, with the editor open too. `MERGED` must be the project's file of the Blueprint (`/Game/A/BP_X` is `<project>/Content/A/BP_X.uasset`; git's `$MERGED`, the working file); otherwise `merge` prints `error: MERGED must be <file> (the project's file for <package>)` and touches nothing. `OURS` must be a `.uasset` (it is copied to `MERGED`): with a model JSON, `merge` prints `error: -o needs OURS as a .uasset (it is copied to MERGED)` and exits with `1` before writing anything. Writing needs UE 5.7 or 5.8 with the BlueprintReview plugin enabled in the project: the edit server of the open editor applies it, or a commandlet when the editor is closed (`--live` / `--commandlet` choose, `--engine DIR` names the engine for the commandlet, as in `edit apply`). The host is chosen once (the open editor's server when it answers, as for `edit apply`): the dry run and the apply run on the same one, and if the editor closes in between, the apply fails rather than switching to a commandlet. With `--live` and no editor that answers, `merge` exits with `1` before touching anything. The open editor reloads the assets git changed on disk before it applies the merge (see `edit apply`). The steps:
+  1. The merge's edit plan is made as for `--plan`; unresolved conflicts or a change no op can write exit with `1` before anything is touched.
+  2. `OURS` is copied to `MERGED` when they differ (git's `OURS` is a temporary copy). `MERGED`'s old content is backed up first, to `MERGED.orig` (or `MERGED.orig.1`, `.orig.2`, … when that exists), with `note: MERGED backed up to <file>`. With the editor open, `MERGED` must already hold ours (as under `git mergetool`): the editor merges into the package it has loaded, not the file on disk, so otherwise `merge` exits with `1` before touching anything, with `error: the editor has MERGED loaded and it isn't ours; close the editor (a commandlet then merges), or revert the asset in the editor first` (a merge applied once already, say). When `MERGED` doesn't exist yet, the editor can't make it: `error: MERGED doesn't exist yet; close the editor so a commandlet can create it`.
+  3. The plan is dry-run. A merge that doesn't compile isn't saved: the compiler's messages are printed, then `error: the merged Blueprint doesn't compile (N message(s)), so it isn't saved; MERGED is left as ours`, and `merge` exits with `1`.
+  4. The plan is applied and saved. If the plugin fails, its error is printed, `MERGED` is left as ours and `merge` exits with `1`.
+  5. The plugin's export of the saved asset is compared with the merge (for an enum, struct, data table or data asset, which the plugin doesn't export, the saved `MERGED` is read back instead). Each difference is printed as `note: the editor changed <path>: …`, and `wrote MERGED: N differences from the merge, M cosmetic changes (node positions, sizes, names), K re-made by the editor (new GUIDs)` ends the output. Most differences are information (the editor fixes some values up on load, places and names the nodes it adds, rebuilds a node's pins); `merge` exits with `0` then. A loss is a failure: a node of the merge missing from the saved asset (one the editor made anew, a node of the same class under a new GUID, isn't missing) or of another class, or a graph, variable, component, timeline, enum entry, struct field or data table row missing. `merge` then prints `error: the saved asset lost N thing(s) the merge has:` with one line each, then `error: MERGED is written, but isn't the merge: check it in the editor or merge again (its old content is in MERGED.orig)`, and exits with `1`; the `wrote` line still comes first, as `MERGED` is written. Nodes the editor makes anew for an added function or dispatcher (its entry and result) get new GUIDs, and are matched to the merge's by graph and class; a function or event graph an op adds gets a new graph GUID, and a variable added back (one side removed it, the merge keeps it) or a local variable an op adds a new variable GUID, matched by name; an enum entry the editor adds gets the next `NewEnumerator<N>` name, matched by its display name. None of these are differences; `K` counts them (the nodes, graphs and variables matched this way), so a merge whose pasted nodes lost their GUIDs shows there.
+- The three revisions are warned about (`warning: revisions saved by different engines: …` on stderr) when their package headers name different engine versions.
+- Like `diff`, `merge` needs BlueprintReview Pro.
+- The app's [merge view](#merge-view) runs this merge with your choices; the guide's [Merge two branches](guide/merge.md) explains it step by step.
+
+`--format md` (default) prints `## Merge of <name>`, a line saying the merge is experimental, the number of conflicts and how many are unresolved, the merge's warnings (a **Warnings** list, also printed to stderr as `warning: …`), a table of the conflicts (path, kind, base, ours, theirs, your choice; a value as the Details panel shows it (`2.0`, an enum by its display name), a whole node, graph, variable or widget tree in a few words, `removed` for the side that removed it, each cell at most 80 characters), the conflicts' notes (`Notes:`) and, folded away, the changes merged from each side, in words (`| Change | From | Taken |`, the side it came from and the side the result has: `BoostTime: default 0.0 → 2.0 | ours | ours`, `Added Delay to EventGraph | theirs | theirs`, `Bob timeline: track Pulse added | theirs | theirs`; an overridden one says so: `BoostTime: default 0.0 → 2.0, overridden: theirs taken | ours | theirs`). The warnings name what they are about the same way (`Speed: removing it also removes 1 new node: Get Speed`). `--format json` prints the whole result: the `merged` Blueprint, the `conflicts` (with their `options`, and a `note` where the kind alone doesn't say what a choice does), the `changes` (each with its `path`, the side it came `from`, and its `base`, `ours` and `theirs` values where that side has one: for an added or removed item the whole item, a node or a whole graph, so the JSON can be large; an overridden one also its `choice`, and an `error` when the choice couldn't be applied, as for `both` or `value`, or at a change both sides made; a graph that goes with an overridden interface or dispatcher its `follows`, the override's path) and the `warnings`.
 
 ---
 
@@ -423,8 +455,18 @@ are in [EDITING.md](EDITING.md).
   `--strict-style` is given. `--format json` lists them with the issues, each with a `style` rule id.
 - **`apply`**:
   - validates first;
-  - uses the open editor's edit server when `Saved/BlueprintEdit/server.json` says one runs, and a headless
-    `-run=BlueprintEdit` commandlet otherwise (`--live` / `--commandlet` force one, `--engine` picks the engine);
+  - uses the open editor's edit server when `Saved/BlueprintEdit/server.json` names one that answers (a quick
+    `GET /status` with its token, two seconds at most), and a headless `-run=BlueprintEdit` commandlet otherwise
+    (`--live` / `--commandlet` force one, `--engine` picks the engine). A `server.json` whose server doesn't answer
+    is what an editor that crashed leaves: the apply notes `note: the edit server in … doesn't answer (…): the editor
+    is closed or crashed and left the file; applying with a commandlet`, and with `--live` that is the error;
+  - in the open editor, reloads first the packages whose file changed on disk since the editor loaded them (a
+    `git merge`, a checkout, a sync), as the editor's *Reload* does, and notes `note: the editor reloaded N
+    package(s) changed on disk since it loaded them: …`; a changed package that also has unsaved changes in the
+    editor fails the apply, naming it, before anything is changed;
+  - with a commandlet, removes the plan and report files it passes it (`Saved/BlueprintEdit/cli.<nonce>.plan.json`
+    and `.report.json`) once the report is read; when the run fails before that, they are kept and the error names
+    them;
   - checks that the report carries this run's nonce and succeeded, and exits with 1 otherwise;
   - prints each op's result, the GUIDs of what it created, the compile messages, the plugin's style findings, and
     a `blueprintreview diff` command line for each Blueprint's before/after JSON (`--json` prints the report
@@ -446,18 +488,21 @@ blueprintreview git-setup [--repo DIR] [--dry-run]   # one repository (default: 
 blueprintreview git-setup --global [--dry-run]       # all your repositories
 ```
 
-Writes everything `git diff` and `git difftool` need for Blueprints:
+Writes everything `git diff`, `git difftool` and `git mergetool` need for Blueprints:
 - `diff.blueprintreview.textconv` and `cachetextconv`, so `git diff`, `git log -p` and `git show` print Blueprint changes as text ([`textconv`](#blueprintreview-textconv--blueprints-in-git-diff));
 - `difftool.blueprintreview.cmd`, so `git difftool -t blueprintreview` opens the viewer's [side-by-side diff](#as-a-git-difftool);
-- the line `*.uasset diff=blueprintreview` at the end of `.gitattributes`. It goes at the end because the usual LFS line (`*.uasset filter=lfs diff=lfs merge=lfs -text`) also sets `diff`, and later lines win. LFS still works: git smudges each version before the text conversion. With `--global`, the line goes to your global attributes file instead (`core.attributesFile`, else `~/.config/git/attributes`).
+- `mergetool.blueprintreview.cmd` and `mergetool.blueprintreview.trustExitCode = false`, so `git mergetool -t blueprintreview` opens the [merge view](#merge-view). The app exits the same way whether or not you applied the merge, so git doesn't trust its exit code: it takes the file as resolved when the merge view wrote it, and asks *Was the merge successful?* otherwise;
+- the lines `*.uasset diff=blueprintreview`, `*.uasset merge=binary` and `*.umap merge=binary` at the end of `.gitattributes`. They go at the end because the usual LFS lines (`*.uasset filter=lfs diff=lfs merge=lfs -text`) also set `diff` and `merge`, and later lines win. LFS still works: git smudges each version before the text conversion. `merge=binary` makes a conflicted asset keep ours' file: without it, Git LFS's `merge=lfs` falls back to a text merge of the small pointer files, and the working `.uasset` holds conflict markers instead of an asset. With `--global`, the lines go to your global attributes file instead (`core.attributesFile`, else `~/.config/git/attributes`).
 
 The commands run `blueprintreview-app` from the CLI's own folder (an install, or `target/release`) and the CLI itself by its full path, so neither has to be on `PATH`. Running the setup again changes nothing, and `--dry-run` shows what it would do:
 
 ```
 set difftool.blueprintreview.cmd = "C:/Program Files/BlueprintReview/blueprintreview-app.exe" --diff "$LOCAL" "$REMOTE" --path "$MERGED"
+set mergetool.blueprintreview.cmd = "C:/Program Files/BlueprintReview/blueprintreview-app.exe" --merge "$BASE" "$LOCAL" "$REMOTE" "$MERGED"
+set mergetool.blueprintreview.trustExitCode = false
 set diff.blueprintreview.textconv = "C:/Program Files/BlueprintReview/blueprintreview.exe" textconv
 set diff.blueprintreview.cachetextconv = true
-added `*.uasset diff=blueprintreview` to E:\Projects\MyGame\.gitattributes
+added `*.uasset diff=blueprintreview`, `*.uasset merge=binary`, `*.umap merge=binary` to E:\Projects\MyGame\.gitattributes
 ```
 
 Commit `.gitattributes`, so the rest of the team only needs to run `blueprintreview git-setup --global` once.
@@ -573,7 +618,7 @@ Graph controls:
 - **Revision labels:** the bottom-right corner of each side names the asset and the revision it comes from, as in the editor: `Revision 45dab25b - 19 Jun 2026, 12:33:25 pm` for a version from a git commit, `Local Revision` for the working copy or a file git doesn't know. git runs in the background, so the window opens straight away; until it answers, the labels say `Looking up revision…`.
 - **Swap** exchanges the old and new versions; **Exit diff** goes back to the normal view of the new version.
 - **Report** (above *Changes*, next to Prev/Next) shows the diff as a report instead: every change as a list, in the same wording and colours as *Changes*, then each changed graph's old and new version side by side as one image (the drawing [`blueprintreview render --against`](#blueprintreview-render--graphs-as-svg-images) writes). **Fit width**, 50%, 100% and 200% size the images. **Save as HTML…** writes the report as one file with the images inline, which opens in any browser (on the web it downloads). **Interactive diff** goes back.
-- **Editions:** the free Lite shows every diff as its report; the interactive view, and the Time-lapse, are part of Pro (see [Editions and licenses](guide/license.md)). The window title and a toolbar badge (`LITE` or `PRO`) show which edition runs. The license decides which (see [GUIDE.md](GUIDE.md), "Editions, trial and license"). A license, the 14-day trial from the first launch, or the beta (which unlocks everything until the end of 30 November 2026, `bp_license::BETA_UNTIL`; a first launch in the beta gets its trial after that date) runs as Pro. The toolbar's licence chip names the state (`PRO TRIAL · 12 DAYS`, `BETA`, `LITE`, `PRO`), and its **Activate…** (Lite: **Upgrade…**) button opens the *License* window, which activates a key or links to the pricing; the window title names the state too, and a dismissable bar reminds in the trial's last 3 days and once after. In Lite, *Interactive diff · PRO* and *History · PRO* open that window. `blueprintreview diff` and `render` check the same license. `BLUEPRINTREVIEW_EDITION=lite` or `pro` (on the web `?edition=lite`) overrides it, to try an edition.
+- **Editions:** the free Lite shows every diff as its report; the interactive view, and the Time-lapse, are part of Pro (see [Editions and licenses](guide/license.md)). The window title and a toolbar badge (`LITE` or `PRO`) show which edition runs. The license decides which (see [GUIDE.md](GUIDE.md), "Editions, trial and license"). A license, the 14-day trial from the first launch, or the beta (which unlocks everything until the end of 30 November 2026, `bp_license::BETA_UNTIL`; a first launch in the beta gets its trial after that date) runs as Pro. The toolbar's licence chip names the state (`PRO TRIAL · 12 DAYS`, `BETA`, `LITE`, `PRO`), and its **Activate…** (Lite: **Upgrade…**) button opens the *License* window, which activates a key or links to the pricing; the window title names the state too, and a dismissable bar reminds in the trial's last 3 days and once after. In Lite, *Interactive diff · PRO* and *History · PRO* open that window. `blueprintreview diff`, `merge` and `render` check the same license. `BLUEPRINTREVIEW_EDITION=lite` or `pro` (on the web `?edition=lite`) overrides it, to try an edition.
 - **Updates:** once a day at start-up, a release build reads `https://blueprintreview.efenggamedev.com/latest.json` (written by the release workflow). When there's a newer release, *Version X available* appears next to the version label. The label's menu runs the check now, or turns it off (*Check for updates daily*, saved in `%LOCALAPPDATA%\BlueprintReview\Updates.json`). Debug builds don't check unless `BLUEPRINTREVIEW_UPDATE_URL` names a `latest.json`, and the Microsoft Store package never does (the Store updates it).
 
 #### As a git difftool
@@ -646,6 +691,32 @@ The *Details* panel works like the editor's too: a search box, then collapsible 
 
 P4V's diffs of `.uasset` files then open in the viewer: *Diff Against Have Revision*, *Diff Against Previous*, and the diffs in the *History* tab. P4V hands over temporary copies named for their revision (`BP_Hero#3.uasset`), so each side is labelled `Revision 3`, or `Revision shelved in CL 1234` for a shelved file (`@=1234`). Your workspace file is `Local Revision`. P4V's names carry no dates, so the labels have none.
 
+#### From Rider or VS Code
+
+Rider calls the viewer as an external diff tool: *Settings → Tools → Diff & Merge → External Diff Tools*, a diff tool with the path of `blueprintreview-app.exe` and the argument pattern `--diff %1 %2`, chosen for Rider's *UAsset* (and *UMap*) file type. VS Code has no such setting; run `git difftool -t blueprintreview` in its terminal or from a task. Both are step by step in the guide's [Diff from Rider or VS Code](guide/review-ide.md).
+
+### Merge view
+
+> **Experimental:** the merge view is experimental (its toolbar says so), and writing a merge (*Apply merge*) uses
+> the BlueprintReview plugin's editing, which is experimental too. Keep the project under source control and review
+> the merged Blueprint before you commit it.
+
+`blueprintreview-app --merge <BASE> <LOCAL> <REMOTE> <MERGED>` opens a three-way merge, with the arguments in git mergetool's order: the common ancestor, ours (the branch you're on), theirs (the branch being merged) and the working file the result goes to. The merge is the same as [`blueprintreview merge`](#blueprintreview-merge--merge-two-changed-versions). A missing or empty `BASE` means the file was added on both sides. As a git mergetool:
+
+```sh
+blueprintreview git-setup          # once: the merge tool, and merge=binary for .uasset files
+git mergetool -t blueprintreview -- Content/BP_Hero.uasset
+```
+
+[`blueprintreview git-setup`](#blueprintreview-git-setup--set-git-up-for-blueprints) writes the merge tool's command; by hand it is `git config mergetool.blueprintreview.cmd 'blueprintreview-app --merge "$BASE" "$LOCAL" "$REMOTE" "$MERGED"'`. P4V's merge tool setting isn't supported yet (P4V's result file is a temporary copy outside the project, which *Apply merge* can't write); the guide's [Merge two branches](guide/merge.md) walks through the view, with a by-hand Perforce recipe.
+
+- **Graph tabs** list the graphs either side changed, coloured as in the diff view, and orange when a conflict is left in them. Each tab shows three graphs side by side: **Theirs**, the **Result** and **Ours**. They pan and zoom together; the padlock above them unlocks them. **Base** shows the common ancestor in place of theirs. Nodes are outlined by where the result's version comes from: ours, theirs, both, or orange for a conflict.
+- **Conflicts** (on the left) lists every conflict, grouped by where it is (*Variables*, *Defaults*, *Class Settings*, then each graph), with what both sides did (`Changed on both sides`, `Removed on one side, changed on the other`, ...), what it is about, and the base, ours and theirs values. **Take ours**, **Take theirs** (and **Take both** where both can stay, as for a variable added on both sides) resolve it, and the result changes at once; **Clear** takes the choice back. The value field takes a value of your own, as JSON (`"7.5"`), with **Use value** or Enter. Click a conflict, or **Prev** / **Next**, to open its graph and frame its node. Below, *N changes merged* lists what was taken from one side without a conflict, in words (`Added Delay to EventGraph (theirs)`), the side in its colour; pointing at one shows its path. **Take ours** / **Take theirs** under a change override it (the side the result has is highlighted; the side it didn't come from undoes it), **Clear** takes the override back; Lite lists the changes without them.
+- **My Blueprint** (below *Conflicts*, with *Components* for an actor Blueprint) and **Details** (on the right) show the result, as it would be written. *Class Settings* and *Class Defaults* in the toolbar show the merged settings and defaults; a node picked on the **Result** canvas shows in *Details*, and a graph picked in *My Blueprint* opens its tab when a side changed it.
+- **Apply merge** (in the toolbar, once every conflict has a choice; its tooltip says how many are left) writes the result to `MERGED`. It runs `blueprintreview merge BASE LOCAL REMOTE --resolve <your choices> -o MERGED --project <the .uproject>` (see [`blueprintreview merge`](#blueprintreview-merge--merge-two-changed-versions) for the steps: a backup of `MERGED`, a dry run, the apply, the check) and shows what it printed in a window, with **Open the result** once it worked. It needs `blueprintreview` beside the app, `MERGED` inside an Unreal project (else the button is off, with "MERGED isn't inside an Unreal project"), `LOCAL` as a `.uasset` (a model JSON can't be copied to `MERGED`; the button is off then too), UE 5.7 or 5.8, and the BlueprintReview plugin enabled in the project. With the editor open, its edit server applies the merge; otherwise a commandlet does, which takes a minute or so as Unreal starts. When the saved asset differs from the merge, the window says so in orange ("The merge was written to MERGED, with N differences from the merge."); the `note:` lines in the output name them. When the check found a loss (a node or member of the merge missing), the window says so in red ("The merge was written to MERGED, but the saved asset lost N things the merge has: check it in the editor or merge again.") and lists them; **Open the result** is there too, as `MERGED` is written. After the open editor applied it, the editor keeps the merged asset loaded, so applying again needs the editor closed (a commandlet then merges) or the asset reverted in the editor first; the window says so.
+- **The web viewer** can't open a merge yet. Use `blueprintreview merge … --plan merge.json` for an edit plan to apply with `blueprintreview edit apply merge.json --project X.uproject`.
+- **Editions:** the merge view is part of Pro. Lite lists the conflicts read-only, with no graphs and no choices; *Apply merge* is greyed out, its tooltip saying writing the merge is part of Pro.
+
 ### Source control and the Time-lapse view
 
 The viewer finds out on its own whether the open asset is in a git work tree or a Perforce workspace. The toolbar's source control button, at the top right, says which (`✔ Git`, `✔ Perforce`, `Not in source control`) and opens the settings:
@@ -667,7 +738,7 @@ The viewer runs the `git` and `p4` command-line programs. Git for Windows and P4
 
 The app writes what it does to a log: the files it opens, their warnings, assets it couldn't load, and why a file failed to open. Click **Output Log** on the right of the toolbar, or press ``Ctrl+` `` (backtick), to show the log under the window, like the editor's *Output Log*. You can filter it by text or verbosity (*All*, *Warnings and errors*, *Errors*), clear it, copy it, and open the log folder. The button counts the warnings (yellow) and errors (red) logged while the panel was closed.
 
-The same lines go to `%LOCALAPPDATA%\BlueprintReview\Logs\BlueprintReview.log` (on Linux, `~/.local/state/BlueprintReview/Logs`). Each run starts a new file and keeps the last five as `BlueprintReview-backup-<time>.log`. Lines are stamped in UTC, as in the editor's logs:
+The same lines go to `%LOCALAPPDATA%\BlueprintReview\Logs\BlueprintReview.log` (on Linux, `~/.local/state/BlueprintReview/Logs`; in the Microsoft Store package, `%LOCALAPPDATA%\Packages\<BlueprintReview's package>\LocalState\BlueprintReview\Logs`, which Windows deletes on uninstall). The settings files (`SourceControl.json`, `Updates.json`, `Display.json`) and `License.json` sit beside `Logs`. Each run starts a new file and keeps the last five as `BlueprintReview-backup-<time>.log`. Lines are stamped in UTC, as in the editor's logs:
 
 ```
 [2026.10.19-14.03.11:204][info] blueprintreview_app::app::loading: Opened BP_Hero.uasset: 4 graphs, 7 variables
@@ -970,7 +1041,7 @@ Options:
 
 ## Errors and exit codes
 
-Every command exits with code `0` on success and `1` on error, printing the reason to stderr. `check` also exits with `1` when it finds differences, and so does `diff --exit-code` when there are non-cosmetic changes. Common messages:
+Every command exits with code `0` on success and `1` on error, printing the reason to stderr. `check` also exits with `1` when it finds differences, `diff --exit-code` when there are non-cosmetic changes, and `merge -o` when the saved asset lost a node or member of the merge (it is written then). Common messages:
 
 | Message | Meaning |
 |---|---|

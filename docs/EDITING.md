@@ -194,7 +194,7 @@ of each op are in `blueprintreview edit ops`.
 | Events and dispatchers | `add_event_inputs`, `remove_event_inputs`, `rename_event`, `add_dispatcher`, `remove_dispatcher`, `rename_dispatcher`; custom-event settings through `set_param`, `move_param`, `set_function_flags` and `set_function_metadata` with `"node"` |
 | Class | `implement_interface`, `remove_interface`, `reparent`, `set_class_default`, `set_class_setting` (Class Settings), `compile` |
 | Components | `add_component`, `remove_component`, `rename_component`, `attach_component` (with socket), `set_root_component`, `set_component_property` (inherited components through their override template) |
-| Nodes | `spawn_node`, `remove_node`, `paste_t3d` (the editor's copy text, e.g. from `blueprintreview copy`), `move_node`, `align_nodes`, `set_node_enabled`, `set_node_comment`, `refresh_nodes`, `replace_node`, `set_node_property`, `insert_into_exec_chain` |
+| Nodes | `spawn_node`, `remove_node`, `paste_t3d` (the editor's copy text, e.g. from `blueprintreview copy`; the pasted nodes get new GUIDs, or keep the copied ones with `"keep_guids": true`, which fails if a node in the Blueprint already has one; under `keep_guids` a pasted collapsed graph keeps its name and its nodes' GUIDs, and a state machine, whose states the editor gives new GUIDs on paste, fails), `move_node`, `align_nodes`, `set_node_enabled`, `set_node_comment`, `refresh_nodes`, `replace_node`, `set_node_property`, `insert_into_exec_chain` |
 | Pins | `link`, `break_link`, `break_all_links`, `set_pin_default`, `add_input_pins`, `remove_pin`, `split_pin`, `recombine_pin`, `promote_to_variable`, `move_links`, `insert_reroute` |
 | Comments | `add_comment`, `set_comment` (text, colour, font size, bubble, move mode), `resize_comment` |
 | Timelines | `spawn_node` kind `timeline`, `set_timeline`, `add_timeline_track` (float, vector, colour, event; or an external curve), `remove_timeline_track`, `rename_timeline_track`, `set_timeline_keys`, `rename_timeline` |
@@ -313,10 +313,12 @@ With no asset to look at (no `--project`), or nothing to go by in it, the rules 
 
 ## 8. The report
 
-Every run writes `<Project>/Saved/BlueprintEdit/<plan>.<nonce>.report.json` (`BlueprintEditReport/2`). It holds:
+Every run writes `<Project>/Saved/BlueprintEdit/<plan>.<nonce>.report.json` (`BlueprintEditReport/2`; a commandlet
+`blueprintreview edit apply` starts writes `cli.<nonce>.report.json`, which it removes with the plan once read). It holds:
 - the status and the nonce;
 - what each op did;
-- every created node's alias, GUID and pins (`id`, `name`, `direction`), so a follow-up plan can name them;
+- every created node's alias, GUID and pins (`id`, `name`, `direction`), so a follow-up plan can name them; a
+  pasted node also has `source_guid`, its GUID in the copy text;
 - the compile results;
 - each asset's style findings (`style`: `rule`, `graph`, `node`, `message`; section 7);
 - for each Blueprint, its canonical JSON before and after the edit (`before`, `after`). `blueprintreview diff
@@ -342,9 +344,26 @@ commandlet's start-up. The change goes into the editor's undo history, and you r
 Plans are refused while Play In Editor runs. Any process that can read your project's `Saved` folder can use the
 server, so turn it off on a shared machine.
 
+- **`server.json`:** written when the server starts and removed when it stops, including when the editor closes
+  (on `FCoreDelegates::OnEnginePreExit`, before any module shuts down). An editor that crashed or was killed leaves
+  it, so `blueprintreview edit apply` asks `GET /status` before using it, and goes to a commandlet when nothing
+  answers.
+- **Files changed on disk:** before a plan runs, the server reloads every package of the project the editor has
+  loaded whose file changed since (`BpEdit::Reload`: the file's saved hash, `FPackageFileSummary::GetSavedHash`,
+  against the one the package was loaded or saved with), as the editor's *Reload* does
+  (`UPackageTools::ReloadPackages`), so a plan never edits a copy older than the file a `git merge` or a sync
+  wrote. The report lists them (`reloaded`). A changed package with unsaved changes in the editor fails the plan
+  before anything changes; save or revert it first.
+
 ## 10. Not covered
 
 - Graphs that aren't Blueprint script graphs: AnimGraph and state machines, the Widget Designer, Behavior Trees,
   materials and Niagara. Their editors use other schemas and node models.
 - Creating Widget or Anim Blueprints.
+- Pasting a Timeline node: the editor names its timeline anew and gives it an empty timeline (the copy text
+  doesn't carry the timeline itself). Make one with `spawn_node` kind `timeline` and the track ops instead.
+- Changing a parameter's type (or removing it) where a call in the Blueprint sets a value on its pin or wires
+  it: rebuilding the call puts a literal and a conversion node in front of the old value, and keeps a removed
+  parameter's pin as an orphan. Clear the value or the wire first. A dispatcher's Call node keeps a renamed
+  parameter's old pin the same way.
 - Breakpoints and watches, which are debug state rather than asset state.

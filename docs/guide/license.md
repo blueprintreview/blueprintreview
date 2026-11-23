@@ -10,6 +10,7 @@
 | A diff as a report, *Save as HTML* | ✓ | ✓ |
 | The interactive side-by-side diff | | ✓ |
 | Time-lapse | | ✓ |
+| The merge view (choices, *Apply merge*) and `blueprintreview merge` | conflicts read-only | ✓ |
 | `blueprintreview diff` and `blueprintreview render` | | ✓ |
 
 The GitHub Action's pull-request comment is free for every repository. The interactive diff viewer its links open will

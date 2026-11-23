@@ -1,0 +1,49 @@
+{
+  "frames": false,
+  "fps": 30,
+  "size": [1536, 864],
+  "pixels_per_point": 1.25,
+  "thumbnail_at": 0,
+  "shots": [
+    {
+      "name": "merge-view",
+      "setup": {"merge": {"base": "fixtures/merge/BP_Pickup/base.uasset", "ours": "fixtures/merge/BP_Pickup/ours.uasset", "theirs": "fixtures/merge/BP_Pickup/theirs.uasset", "merged": "PickupGame/Content/BP_Pickup.uasset", "project": "PickupGame/PickupGame.uproject"}},
+      "fade_in": 0,
+      "actions": [
+        "settle", { "move_to": { "to": [612, 480], "secs": 0 } }, { "scroll": { "notches": 4, "secs": 0.3 } }, { "wait": 0.5 },
+        { "move_to": { "to": [1535, 863], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "merge-view" }
+      ]
+    },
+    {
+      "name": "merge-conflict",
+      "setup": {"merge": {"base": "fixtures/merge/BP_Pickup/base.uasset", "ours": "fixtures/merge/BP_Pickup/ours.uasset", "theirs": "fixtures/merge/BP_Pickup/theirs.uasset", "merged": "PickupGame/Content/BP_Pickup.uasset", "project": "PickupGame/PickupGame.uproject"}},
+      "fade_in": 0,
+      "actions": [
+        "settle", { "move_to": { "to": "Changed on both sides", "index": 1, "secs": 0 } }, "click", { "wait": 0.5 },
+        { "move_to": { "to": [1535, 863], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "merge-conflict" }
+      ]
+    },
+    {
+      "name": "merge-resolved",
+      "setup": {"merge": {"base": "fixtures/merge/BP_Pickup/base.uasset", "ours": "fixtures/merge/BP_Pickup/ours.uasset", "theirs": "fixtures/merge/BP_Pickup/theirs.uasset", "merged": "PickupGame/Content/BP_Pickup.uasset", "project": "PickupGame/PickupGame.uproject"}},
+      "fade_in": 0,
+      "actions": [
+        "settle", { "move_to": { "to": "Take theirs", "index": 0, "secs": 0 } }, "click", { "wait": 0.5 }, { "move_to": { "to": "Changed on both sides", "index": 1, "secs": 0 } }, "click", { "wait": 0.5 }, { "move_to": { "to": "Take theirs", "index": 1, "secs": 0 } }, "click", { "wait": 0.5 },
+        { "move_to": { "to": [1535, 863], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "merge-resolved" }
+      ]
+    },
+    {
+      "name": "merge-base",
+      "setup": {"merge": {"base": "fixtures/merge/BP_Pickup/base.uasset", "ours": "fixtures/merge/BP_Pickup/ours.uasset", "theirs": "fixtures/merge/BP_Pickup/theirs.uasset", "merged": "PickupGame/Content/BP_Pickup.uasset", "project": "PickupGame/PickupGame.uproject"}},
+      "fade_in": 0,
+      "actions": [
+        "settle", { "move_to": { "to": "Base", "secs": 0 } }, "click", { "wait": 0.3 }, { "move_to": { "to": [612, 480], "secs": 0 } }, { "scroll": { "notches": 4, "secs": 0.3 } }, { "wait": 0.5 },
+        { "move_to": { "to": [1535, 863], "secs": 0 } }, { "wait": 0.1 },
+        { "snap": "merge-base" }
+      ]
+    }
+  ]
+}
